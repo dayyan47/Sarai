@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "133224842884",
+    "project_id": "hostel-efdfa",
+    "storage_bucket": "hostel-efdfa.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:133224842884:android:cc13a2692268b7943364d1",
+        "android_client_info": {
+          "package_name": "com.example.hostel_add"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCnuE1h__iJJt_h_Wu50jtF66vtpC47TwM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
