@@ -28,6 +28,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   File? _profileImage;
   DateTime _selectedDate = DateTime.now();
   TextEditingController _dobController = TextEditingController();
+  RegExp pakistanPhoneRegExp = RegExp(r'^03[0-9]{2}[0-9]{7}$');
 
   Future<void> _getImage() async {
     final pickedFile =
@@ -67,9 +68,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
             'date_of_birth': _dateOfBirth,
             'profile_image_url': imageUrl,
           });
+        } else {
+          await _firestore
+              .collection('users')
+              .doc(userCredential.user?.uid)
+              .set({
+            'full_name': _fullName,
+            'phone_number': _phoneNumber,
+            'date_of_birth': _dateOfBirth,
+            'profile_image_url': "",
+          });
         }
         // After Successful signup, you can navigate to the login screen
-        Navigator.push(context, MaterialPageRoute(builder: (context) => LoginScreen()));
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => LoginScreen()));
 
         print('Signed up as ${userCredential.user?.email}');
         print('Full Name: $_fullName');
@@ -79,7 +91,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
         // Handle errors (e.g., weak password, email already exists, etc.)
         setState(() {
           _errorMessage = e.toString();
-          Fluttertoast.showToast(msg: _errorMessage,
+          Fluttertoast.showToast(
+              msg: _errorMessage,
               toastLength: Toast.LENGTH_LONG,
               gravity: ToastGravity.BOTTOM,
               timeInSecForIosWeb: 2,
@@ -101,7 +114,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
-         _dobController.text = DateFormat('dd/MM/yyyy').format(picked);
+        _dobController.text = DateFormat('dd/MM/yyyy').format(picked);
       });
     }
   }
@@ -129,8 +142,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   radius: 70,
                   child: _profileImage == null
                       ? Icon(Icons.camera_alt, size: 50, color: Colors.white)
-                      : CircleAvatar(radius: 75,
-                          backgroundImage: Image.file(_profileImage!, width: 200 , height: 200, fit: BoxFit.fill).image),
+                      : CircleAvatar(
+                          radius: 75,
+                          backgroundImage: Image.file(_profileImage!,
+                                  width: 200, height: 200, fit: BoxFit.fill)
+                              .image),
                 ),
               ),
               TextFormField(
@@ -181,12 +197,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
               TextFormField(
                 decoration: InputDecoration(labelText: 'Phone Number'),
                 keyboardType: TextInputType.phone,
-                validator: (value) {
+                validator: (value){
                   if (value!.isEmpty) {
-                    return 'Please enter your phone number';
+                    return 'Please enter your Phone Number';
                   }
-                  return null;
-                },
+                  else if (!pakistanPhoneRegExp.hasMatch(value)) {
+                    return 'Please enter Valid Phone Number';
+                  }
+                  else{
+                    return null;
+                  }
+              },
                 onSaved: (value) => _phoneNumber = value!,
               ),
               TextFormField(
@@ -209,7 +230,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 onPressed: _signUpWithEmailAndPassword,
                 child: Text(
                   'Sign Up',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ),
               SizedBox(height: 10),
@@ -217,7 +239,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 onPressed: () {
                   Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => LoginScreen())); // Navigate back to the login screen
+                      MaterialPageRoute(
+                          builder: (context) =>
+                              LoginScreen())); // Navigate back to the login screen
                 },
                 child: Text(
                   'Already have an account? Login',

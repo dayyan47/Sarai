@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hostel_add/Ads/Ad_detail%20_screen.dart';
+import 'package:hostel_add/Ads/Ads_HomeScreen.dart';
 
 class UserAdsScreen extends StatefulWidget {
   const UserAdsScreen({super.key});
@@ -16,8 +17,6 @@ class _UserAdsScreenState extends State<UserAdsScreen> {
   final User? currentUser = FirebaseAuth.instance.currentUser;
 
   String? fullName;
-  String? phoneNumber;
-  String? dateOfBirth;
   String? profileImageUrl;
 
   @override
@@ -34,8 +33,6 @@ class _UserAdsScreenState extends State<UserAdsScreen> {
       final userData = userSnapshot.data() as Map<String, dynamic>;
       setState(() {
         fullName = userData['full_name'] as String?;
-        phoneNumber = userData['phone_number'] as String?;
-        dateOfBirth = userData['date_of_birth'] as String?;
         profileImageUrl = userData['profile_image_url'] as String?;
       });
     }
@@ -46,21 +43,21 @@ class _UserAdsScreenState extends State<UserAdsScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFFFF5A5F),
-        title: const Center(
-            child: Text(
-          'My Ads',
-          style: TextStyle(color: Colors.white),
-        )),
+        title: Text('My Ads',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        iconTheme: IconThemeData(color: Colors.white),
       ),
       // backgroundColor: Color(0xFFFF5A5F),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // User profile information
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(20.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 SizedBox(
                   width: 120,
@@ -114,12 +111,18 @@ class _UserAdsScreenState extends State<UserAdsScreen> {
                   itemCount: ads?.length,
                   itemBuilder: (context, index) {
                     final adData = ads?[index].data() as Map<String, dynamic>;
-
+                    final adId = ads?[index].id;
                     return GestureDetector(
                       onTap: () {
                         final adId = ads?[index].id;
-                        _navigateToAdDetails(adId);
+                        //_navigateToAdDetails(adId);
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => AdDetailScreen(adId: adId!),
+                          ),
+                        );
                       },
+//                      child: AdsHomeScreen(adData: adData, adId: adId!,),
                       child: AdCard(adData: adData),
                     );
                   },
@@ -132,15 +135,15 @@ class _UserAdsScreenState extends State<UserAdsScreen> {
     );
   }
 
-  void _navigateToAdDetails(String? adId) {
-    if (adId != null) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => AdDetailScreen(adId: adId),
-        ),
-      );
-    }
-  }
+  // void _navigateToAdDetails(String? adId) {
+  //   if (adId != null) {
+  //     Navigator.of(context).push(
+  //       MaterialPageRoute(
+  //         builder: (context) => AdDetailScreen(adId: adId),
+  //       ),
+  //     );
+  //   }
+  // }
 }
 
 class AdCard extends StatelessWidget {
@@ -151,80 +154,83 @@ class AdCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = adData['title'] as String? ?? 'No Title';
+    final hostelName = adData['hostel_name'] as String? ?? 'No Hostel name';
     final price = adData['price'] as String? ?? 'No Price';
     final imageUrl = adData['image_url'] as String?;
     final userId = adData['userId'];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Determine the screen width
-        final screenWidth = constraints.maxWidth;
+    return Padding(
+      padding: const EdgeInsets.all(4.0),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Determine the screen width
+          final screenWidth = constraints.maxWidth;
 
-        // Define the number of columns based on screen width
-        int columns = 2;
-        if (screenWidth > 600) {
-          columns = 3;
-        }
+          // Define the number of columns based on screen width
+          int columns = 2;
+          if (screenWidth > 600) {
+            columns = 3;
+          }
 
-        // Calculate image dimensions based on the number of columns
-        final imageSize = screenWidth / columns - 16.0; // Subtract spacing
+          // Calculate image dimensions based on the number of columns
+          final imageSize = screenWidth / columns - 16.0; // Subtract spacing
 
-        return Card(
-          elevation: 4,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (imageUrl != null)
-                Image.network(
-                  imageUrl,
-                  height: imageSize,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
+          return Card(
+            elevation: 4,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (imageUrl != null)
+                  Image.network(
+                    imageUrl,
+                    height: imageSize,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hostelName,
+                        style:
+                            const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('Price: $price'),
+                      StreamBuilder<DocumentSnapshot>(
+                        stream: _firestore
+                            .collection('users')
+                            .doc(userId)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const CircularProgressIndicator();
+                          }
+
+                          if (!snapshot.hasData || snapshot.data == null) {
+                            return const Text('User profile data not found.');
+                          }
+
+                          final userData =
+                              snapshot.data!.data() as Map<String, dynamic>;
+
+                          final username =
+                              userData['full_name'] as String? ?? 'No Username';
+
+                          return Text('Posted by: $username');
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style:
-                          const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    const SizedBox(height: 4),
-                    Text('Price: $price'),
-                    StreamBuilder<DocumentSnapshot>(
-                      stream: _firestore
-                          .collection('users')
-                          .doc(userId)
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const CircularProgressIndicator();
-                        }
-
-                        if (!snapshot.hasData || snapshot.data == null) {
-                          return const Text('User profile data not found.');
-                        }
-
-                        final userData =
-                            snapshot.data!.data() as Map<String, dynamic>;
-
-                        final username =
-                            userData['full_name'] as String? ?? 'No Username';
-
-                        return Text('Posted by: $username');
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }

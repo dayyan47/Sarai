@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:hostel_add/Ads/Edit_Ad.dart';
+import 'package:hostel_add/Ads/Post_Edit_Ads.dart';
 
 class AdDetailScreen extends StatefulWidget {
   final String adId;
@@ -14,8 +14,8 @@ class AdDetailScreen extends StatefulWidget {
 
 class _AdDetailScreenState extends State<AdDetailScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  bool _isAdOwner = false; // If the User is logged-in, user is the owner of the ad.
+  bool _isAdOwner =
+      false; // If the User is logged-in, user is the owner of the ad.
 
   @override
   void initState() {
@@ -46,23 +46,29 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ad Details'),
-        actions: [
-          // Conditionally show the "Edit" button if the logged-in user is the owner of the ad.
-          if (_isAdOwner)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () {
-                // Navigate to the edit screen when the "Edit" button is pressed.
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => EditAdScreen(adId: widget.adId),
-                  ),
-                );
-              },
-            ),
-        ],
+        backgroundColor: Color(0xFFFF5A5F),
+        title: Text('Ad Details',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        iconTheme: IconThemeData(color: Colors.white),
+        actions:
+            _isAdOwner // Conditionally show the "Edit" button if the logged-in user is the owner of the ad.
+                ? [
+                    IconButton(
+                      icon: const Icon(Icons.edit),
+                      onPressed: () {
+                        // Navigate to the edit screen when the "Edit" button is pressed.
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                PostEditAdScreen(adId: widget.adId),
+                          ),
+                        );
+                      },
+                    ),
+                    SizedBox(width: 10)
+                  ]
+                : null,
       ),
       body: Stack(children: [
         StreamBuilder<DocumentSnapshot>(
@@ -110,8 +116,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               );
             } else {
               // Display a "No Image" icon when there's no image URL.
-              imageWidget =
-                  const Icon(Icons.image_not_supported, size: 30, color: Colors.grey);
+              imageWidget = const Icon(Icons.image_not_supported,
+                  size: 30, color: Colors.grey);
             }
 
             return SingleChildScrollView(
@@ -128,10 +134,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           const Text(
-                            'Title:',
+                            'Hostel Name:',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          Text(' ${adData['title']}')
+                          Text(' ${adData['hostel_name']}')
                         ],
                       ),
                       const SizedBox(
@@ -169,9 +175,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          const Text('Address:', style: TextStyle(
-                            fontWeight: FontWeight.bold
-                          ),),
+                          const Text(
+                            'Address:',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           Text('${adData['address']}')
                         ],
                       ),

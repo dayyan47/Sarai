@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:hostel_add/Ads/Ad_detail%20_screen.dart';
 import '../Hostel/adDetail.dart';
 
 class AdsHomeScreen extends StatelessWidget {
@@ -12,7 +13,7 @@ class AdsHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = adData['title'] as String? ?? 'No Title';
+    final hostelName = adData['hostel_name'] as String? ?? 'No Hostel nme';
     final price = adData['price'] as String? ?? 'No Price';
     final imageUrl = adData['image_url'] as String?;
     final address = adData['address'] as String;
@@ -20,7 +21,7 @@ class AdsHomeScreen extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => RoomDetail(adId: adId)));
+            MaterialPageRoute(builder: (context) => AdDetailScreen(adId: adId)));
       },
       child: Card(
         elevation: 4,
@@ -47,7 +48,7 @@ class AdsHomeScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      title,
+                      hostelName,
                       style: const TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 16),
                     ),

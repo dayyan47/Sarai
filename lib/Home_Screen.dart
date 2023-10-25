@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hostel_add/Ads/Ads_HomeScreen.dart';
-import 'package:hostel_add/Ads/Post_Ads.dart';
+import 'package:hostel_add/Ads/Post_Edit_Ads.dart';
 import 'package:hostel_add/User/Prof_Screen.dart';
 import 'package:hostel_add/Widgets/Maps_Widget.dart';
 import 'package:modern_form_line_awesome_icons/modern_form_line_awesome_icons.dart';
@@ -56,7 +56,7 @@ class _HScreenState extends State<HScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => PostAdScreen()),
+                  MaterialPageRoute(builder: (context) => PostEditAdScreen(adId: "Post Ad")),
                 );
               },
               backgroundColor: const Color(0xFFFF5A5F),

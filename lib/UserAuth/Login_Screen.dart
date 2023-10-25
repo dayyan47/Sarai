@@ -7,8 +7,6 @@ import 'package:hostel_add/Home_Screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
-
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -42,7 +40,6 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (context) => HScreen()),
               (Route<dynamic> r)=> false);
     }
-
 
   }
 
