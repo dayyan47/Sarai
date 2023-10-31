@@ -4,15 +4,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:hostel_add/New_Splash_Screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:modern_form_line_awesome_icons/modern_form_line_awesome_icons.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class PostEditAdScreen extends StatefulWidget {
   final String adId; // Pass the ad id to edit the specific ad
-  PostEditAdScreen({required this.adId});
+  const PostEditAdScreen({super.key, required this.adId});
 
   @override
   _PostEditAdScreenState createState() => _PostEditAdScreenState();
@@ -93,8 +93,6 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
       _formKey.currentState?.save();
       if (user != null) {
         try {
-          Navigator.push(context,
-              MaterialPageRoute(builder: (context) => NewSplashScreen()));
           setState(() {
             _isLoading = true;
           });
@@ -120,15 +118,21 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
             'longitude': _longitude,
             // You may also update other fields like 'timestamp' if needed.
           };
-          if(_imageName != null) //delete old picture from storage first
-            await FirebaseStorage.instance.ref().child('ad_images').child(_imageName!).delete();
+          if (_imageName != null) {
+            //delete old picture from storage first
+            await FirebaseStorage.instance
+                .ref()
+                .child('ad_images')
+                .child(_imageName!)
+                .delete();
+          }
 
           if (_image != null) {
             final imageUrl = await uploadImage(_image!);
             if (imageUrl != null) {
               adData['image_name'] = imageUrl[0];
               adData['image_url'] = imageUrl[1];
-            }  else if (imageUrl == null || imageUrl.isEmpty || imageUrl == "") {
+            } else if (imageUrl.isEmpty || imageUrl == "") {
               adData['image_name'] = "";
               adData['image_url'] = "Image upload failed.";
             } else {
@@ -138,8 +142,6 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
           }
 
           await _firestore.collection('ads').doc(widget.adId).update(adData);
-
-          Navigator.pop(context);
         } catch (e) {
           // Handle the error as needed
           print('Error updating ad: $e');
@@ -151,8 +153,6 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
               textColor: Colors.white,
               fontSize: 10.0);
         } finally {
-          //Navigator.of(context)..pop()..pop();
-          Navigator.pop(context);
           Navigator.pop(context);
           setState(() {
             _isLoading = false;
@@ -165,8 +165,13 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
   Future<void> _deleteAd() async {
     try {
       await _firestore.collection('ads').doc(widget.adId).delete();
-      if(_imageName != null)
-        await FirebaseStorage.instance.ref().child('ad_images').child(_imageName!).delete();
+      if (_imageName != null) {
+        await FirebaseStorage.instance
+            .ref()
+            .child('ad_images')
+            .child(_imageName!)
+            .delete();
+      }
 
       Fluttertoast.showToast(
           msg: "Ad deleted successfully!",
@@ -217,44 +222,66 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
   // }
 
   Future<void> _getImageFromGallery() async {
+    bool isStoragePermissionGranted = await Permission.storage.isGranted;
+    //bool isGalleryPermissionGranted = await Permission.photos.isGranted; // for ios
 
-    final pickedFile =
-    await ImagePicker().pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      setState(() {
-        _image = File(pickedFile.path);
-      });
+    if (isStoragePermissionGranted) {
+      final pickedFile =
+      await ImagePicker().pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        setState(() {
+          _image = File(pickedFile.path);
+        });
+      }
+    } else {
+      Fluttertoast.showToast(
+          msg: "Please grant Files and Media permission first!",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 2,
+          textColor: Colors.white,
+          fontSize: 10.0);
+      openAppSettings();
     }
   }
 
   Future<void> _getImageFromCamera() async {
+    bool isCameraPermissionGranted = await Permission.camera.isGranted;
+    if (isCameraPermissionGranted) {
+      final pickedFile =
+      await ImagePicker().pickImage(source: ImageSource.camera);
 
-    final pickedFile =
-        await ImagePicker().pickImage(source: ImageSource.camera);
-
-    if (pickedFile != null) {
-      setState(() {
-        _image = File(pickedFile.path);
-      });
+      if (pickedFile != null) {
+        setState(() {
+          _image = File(pickedFile.path);
+        });
+      }
+    } else {
+      Fluttertoast.showToast(
+          msg: "Please grant Camera permission first!",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 2,
+          textColor: Colors.white,
+          fontSize: 10.0);
+      openAppSettings();
     }
   }
 
-  //Show options to get image from camera or gallery
   Future showOptions() async {
     showCupertinoModalPopup(
       context: context,
       builder: (context) => CupertinoActionSheet(
         actions: [
           CupertinoActionSheetAction(
-            child: Text('Photo Gallery'),
+            child: const Text('Photo Gallery'),
             onPressed: () {
               Navigator.of(context).pop();
               _getImageFromGallery(); // get image from gallery
             },
           ),
           CupertinoActionSheetAction(
-            child: Text('Camera'),
+            child: const Text('Camera'),
             onPressed: () {
               Navigator.of(context).pop();
               _getImageFromCamera(); // get image from camera
@@ -294,33 +321,42 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
   // }
 
   void _getCurrentLocation() async {
-    // Request location permission
-    await Permission.location.request();
+    bool isLocationPermissionGranted = await Permission.location.isGranted;
+    if(isLocationPermissionGranted) {
+      // Get the user's current location
+      final location = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
 
-    // Get the user's current location
-    final location = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
-
-    if (location != null) {
-      // Save the location to your database or use it as needed
-      _latitude = location.latitude.toString();
-      _longitude = location.longitude.toString();
-      Fluttertoast.showToast(
-        msg: "Current Location Saved",
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 1,
-      );
+      if (location != null) {
+        // Save the location to your database or use it as needed
+        _latitude = location.latitude.toString();
+        _longitude = location.longitude.toString();
+        Fluttertoast.showToast(
+          msg: "Current Location Saved",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+        );
+      } else {
+        // Handle the case where location couldn't be obtained
+        _latitude = "";
+        _longitude = "";
+        Fluttertoast.showToast(
+          msg: "Location not saved",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+        );
+      }
     } else {
-      // Handle the case where location couldn't be obtained
-      _latitude = "";
-      _longitude = "";
       Fluttertoast.showToast(
-        msg: "Location not saved",
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 1,
-      );
+          msg: "Please grant Location permission first!",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 2,
+          textColor: Colors.white,
+          fontSize: 10.0);
+      openAppSettings();
     }
   }
 
@@ -340,9 +376,6 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
       _formKey.currentState?.save();
       if (user != null) {
         try {
-          // Show the loading indicator and navigate to the splash screen
-          Navigator.push(context,
-              MaterialPageRoute(builder: (context) => NewSplashScreen()));
           setState(() {
             _isLoading = true;
           });
@@ -375,7 +408,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
             if (imageUrl != null) {
               adData['image_name'] = imageUrl[0];
               adData['image_url'] = imageUrl[1];
-            } else if (imageUrl == null || imageUrl.isEmpty || imageUrl == "") {
+            } else if (imageUrl.isEmpty || imageUrl == "") {
               adData['image_name'] = "";
               adData['image_url'] = "Image upload failed.";
             } else {
@@ -395,8 +428,6 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
               textColor: Colors.white,
               fontSize: 10.0);
         } finally {
-          //Navigator.of(context)..pop()..pop();
-          Navigator.pop(context);
           Navigator.pop(context);
           setState(() {
             _isLoading = false;
@@ -409,11 +440,9 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
   Future<List<String?>> uploadImage(File imageFile) async {
     try {
       String imageName = '${DateTime.now()}.jpg';
-      final imageReference = FirebaseStorage.instance
-          .ref()
-          .child('ad_images')
-          .child(imageName);
-      await imageReference.putFile(imageFile!);
+      final imageReference =
+          FirebaseStorage.instance.ref().child('ad_images').child(imageName);
+      await imageReference.putFile(imageFile);
       //imageReference.fullPath;
       final imageUrl = await imageReference.getDownloadURL();
       List<String> data = [imageName, imageUrl];
@@ -454,23 +483,25 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return _isLoading
-        ? CircularProgressIndicator()
-        : Scaffold(
+    return WillPopScope(
+      onWillPop: () async => _isLoading ? false : true,
+      child: Stack(
+        children: [
+          Scaffold(
             appBar: AppBar(
-                backgroundColor: Color(0xFFFF5A5F),
+                backgroundColor: const Color(0xFFFF5A5F),
                 title: Text(
                   _isEdit ? 'Edit Your Ad' : 'Post Your Ad',
-                  style: TextStyle(
+                  style: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold),
                 ),
-                iconTheme: IconThemeData(
+                iconTheme: const IconThemeData(
                   color: Colors.white,
                 ),
                 actions: _isEdit
                     ? [
                         IconButton(
-                            icon: Icon(
+                            icon: const Icon(
                               Icons.delete_forever,
                             ),
                             onPressed: () async {
@@ -498,7 +529,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                                 return;
                               }
                             }),
-                        SizedBox(width: 10)
+                        const SizedBox(width: 10)
                       ]
                     : null),
             body: SingleChildScrollView(
@@ -510,33 +541,45 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Center(
-                        child: GestureDetector(
-                      onTap: showOptions,
-                      child: _image != null
-                          ? AspectRatio(
-                              aspectRatio: 10 / 2,
-                              child: Image.file(
-                                _image!,
-                                fit: BoxFit.contain,
+                    Stack(
+                      children: [
+                        SizedBox(
+                          width: 120,
+                          height: 120,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(70),//100
+                            child: _image != null
+                                ? Image.file(_image!)
+                                : _imageUrl != null
+                                    ? Image.network(_imageUrl!)
+                                    :  IconButton(onPressed: showOptions, icon: const Icon(Icons.add_a_photo), iconSize: 50, color: const Color(0xFFFF5A5F)),
+                          ),
+                        ),
+                        if (_image != null || _imageUrl != null)
+                          Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: showOptions,
+                            child: Container(
+                              width: 35,
+                              height: 35,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(100),
+                                color: const Color(0xFFFF5A5F),
                               ),
-                            )
-                          : _imageUrl != null
-                              ? AspectRatio(
-                                  aspectRatio: 10 / 2,
-                                  child: Image.network(
-                                    _imageUrl!,
-                                    fit: BoxFit.contain,
-                                  ),
-                                )
-                              : Icon(Icons.add_a_photo,
-                                  size: 50, color: Color(0xFFFF5A5F)),
-                    )),
-                    SizedBox(height: 10),
+                              child: const Icon(LineAwesomeIcons.camera_retro),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 25),
                     TextFormField(
                       controller: _hostelNameController,
                       keyboardType: TextInputType.text,
-                      decoration: InputDecoration(labelText: 'Hostel name'),
+                      decoration:
+                          const InputDecoration(labelText: 'Hostel name'),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your Hostel Name';
@@ -544,13 +587,14 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                         return null;
                       },
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     TextFormField(
                       controller: _descriptionController,
                       minLines: 1,
                       maxLines: 2,
                       keyboardType: TextInputType.text,
-                      decoration: InputDecoration(labelText: 'Description'),
+                      decoration:
+                          const InputDecoration(labelText: 'Description'),
                       validator: (value) {
                         if (value!.isEmpty) {
                           return 'Please enter Description';
@@ -558,11 +602,12 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                         return null;
                       },
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     TextFormField(
                       controller: _priceController,
                       keyboardType: TextInputType.number,
-                      decoration: InputDecoration(labelText: 'Monthly Rent'),
+                      decoration:
+                          const InputDecoration(labelText: 'Monthly Rent'),
                       validator: (value) {
                         if (value!.isEmpty) {
                           return 'Please enter Monthly Rent';
@@ -570,11 +615,12 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                         return null;
                       },
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     TextFormField(
                       controller: _phoneNumberController,
                       keyboardType: TextInputType.number,
-                      decoration: InputDecoration(labelText: 'Phone Number'),
+                      decoration:
+                          const InputDecoration(labelText: 'Phone Number'),
                       validator: (value) {
                         if (value!.isEmpty) {
                           return 'Please enter Phone Number';
@@ -582,11 +628,11 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                         return null;
                       },
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     TextFormField(
                       controller: _addressController,
                       keyboardType: TextInputType.text,
-                      decoration: InputDecoration(labelText: 'Address'),
+                      decoration: const InputDecoration(labelText: 'Address'),
                       validator: (value) {
                         if (value!.isEmpty) {
                           return 'Please enter Address';
@@ -594,11 +640,11 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                         return null;
                       },
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     TextFormField(
                       controller: _areaController,
                       keyboardType: TextInputType.text,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                           labelText: 'Sub Area', hintText: ("(Optional)")),
                       // validator: (value) {
                       //   if (value!.isEmpty) {
@@ -607,11 +653,11 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       //   return null;
                       // },
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     TextFormField(
                       controller: _FLM1,
                       keyboardType: TextInputType.text,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                           labelText: 'Famous Landmark 1',
                           hintText: "(Optional)"),
                       // validator: (value) {
@@ -621,11 +667,11 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       //   return null;
                       // },
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     TextFormField(
                       controller: _FLM2,
                       keyboardType: TextInputType.text,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                           labelText: 'Famous Landmark 2',
                           hintText: "(Optional)"),
                       // validator: (value) {
@@ -635,11 +681,11 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       //   return null;
                       // },
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     TextFormField(
                       controller: _FLM3,
                       keyboardType: TextInputType.text,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                           labelText: 'Famous Landmark 3',
                           hintText: "(Optional)"),
                       // validator: (value) {
@@ -649,9 +695,10 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       //   return null;
                       // },
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      decoration: InputDecoration(labelText: 'Select City'),
+                      decoration:
+                          const InputDecoration(labelText: 'Select City'),
                       value: _selectedCity,
                       onChanged: (value) =>
                           setState(() => _selectedCity = value),
@@ -665,10 +712,10 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                         );
                       }).toList(),
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      decoration:
-                          InputDecoration(labelText: 'Select Hostel Type'),
+                      decoration: const InputDecoration(
+                          labelText: 'Select Hostel Type'),
                       value: _selectedGender,
                       onChanged: (value) =>
                           setState(() => _selectedGender = value),
@@ -682,10 +729,10 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                         );
                       }).toList(),
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
                       decoration:
-                          InputDecoration(labelText: 'Air Conditioning'),
+                          const InputDecoration(labelText: 'Air Conditioning'),
                       value: _selectedACOption,
                       onChanged: (value) =>
                           setState(() => _selectedACOption = value),
@@ -699,9 +746,9 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                         );
                       }).toList(),
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      decoration: InputDecoration(labelText: 'UPS'),
+                      decoration: const InputDecoration(labelText: 'UPS'),
                       value: _selectedUPSOption,
                       onChanged: (value) =>
                           setState(() => _selectedUPSOption = value),
@@ -715,9 +762,9 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                         );
                       }).toList(),
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      decoration: InputDecoration(labelText: 'Internet'),
+                      decoration: const InputDecoration(labelText: 'Internet'),
                       value: _selectedInternetOption,
                       onChanged: (value) =>
                           setState(() => _selectedInternetOption = value),
@@ -732,10 +779,10 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                         );
                       }).toList(),
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
                       decoration:
-                          InputDecoration(labelText: 'Select Room Type'),
+                          const InputDecoration(labelText: 'Select Room Type'),
                       value: _selectedRoomsOption,
                       onChanged: (value) =>
                           setState(() => _selectedRoomsOption = value),
@@ -749,9 +796,9 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                         );
                       }).toList(),
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      decoration: InputDecoration(labelText: 'Parking'),
+                      decoration: const InputDecoration(labelText: 'Parking'),
                       value: _selectedParkingOption,
                       onChanged: (value) =>
                           setState(() => _selectedParkingOption = value),
@@ -765,13 +812,13 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                         );
                       }).toList(),
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     Center(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFFFF5A5F)),
+                            backgroundColor: const Color(0xFFFF5A5F)),
                         onPressed: _getCurrentLocation,
-                        child: Text(
+                        child: const Text(
                           'Save Current Location',
                           style: TextStyle(
                               color: Colors.white, fontWeight: FontWeight.bold),
@@ -781,9 +828,9 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                     Center(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFFFF5A5F)),
+                            backgroundColor: const Color(0xFFFF5A5F)),
                         onPressed: _getOtherLocation,
-                        child: Text(
+                        child: const Text(
                           'Save Other Location',
                           style: TextStyle(
                               color: Colors.white, fontWeight: FontWeight.bold),
@@ -794,9 +841,9 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       child: !_isEdit
                           ? ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(0xFFFF5A5F)),
+                                  backgroundColor: const Color(0xFFFF5A5F)),
                               onPressed: _postAd,
-                              child: Text(
+                              child: const Text(
                                 'Post Ad',
                                 style: TextStyle(
                                     color: Colors.white,
@@ -805,9 +852,9 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                             )
                           : ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(0xFFFF5A5F)),
+                                  backgroundColor: const Color(0xFFFF5A5F)),
                               onPressed: _updateAd,
-                              child: Text(
+                              child: const Text(
                                 'Update Ad',
                                 style: TextStyle(
                                     color: Colors.white,
@@ -819,6 +866,27 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                 ),
               ),
             )),
-          );
+          ),
+          if (_isLoading)
+            Positioned.fill(
+                child: Container(
+                    color: Colors.black.withOpacity(0.8),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const CupertinoActivityIndicator(
+                            radius: 25, color: Color(0xFFFF5A5F)),
+                        const SizedBox(height: 10),
+                        Text(_isEdit ? "Updating..." : "Posting...",
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                decoration: TextDecoration.none))
+                      ],
+                    ))),
+        ],
+      ),
+    );
   }
 }

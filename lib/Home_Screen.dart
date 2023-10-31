@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:hostel_add/Ads/Ads_HomeScreen.dart';
+import 'package:hostel_add/Ads/Ad_Home_Screen.dart';
 import 'package:hostel_add/Ads/Post_Edit_Ads.dart';
-import 'package:hostel_add/User/Prof_Screen.dart';
+import 'package:hostel_add/User/Profile_Screen.dart';
 import 'package:hostel_add/Widgets/Maps_Widget.dart';
-import 'package:modern_form_line_awesome_icons/modern_form_line_awesome_icons.dart';
 
 class HScreen extends StatefulWidget {
+  const HScreen({super.key});
+
   @override
   _HScreenState createState() => _HScreenState();
 }
@@ -17,8 +17,8 @@ class _HScreenState extends State<HScreen> {
   int _selectedIndex = 0;
   late List<Widget> screens = [
     _buildDefaultLayout(),
-    MapViewScreen(),
-    ProfScreen()
+    const MapViewScreen(),
+    const ProfileScreen()
   ];
   static const List<Widget> _pages = <Widget>[
     Text('Home',
@@ -36,7 +36,7 @@ class _HScreenState extends State<HScreen> {
           backgroundColor: const Color(0xFFFF5A5F),
           title: _pages[_selectedIndex],
           centerTitle: true),
-      body: screens[_selectedIndex],
+      body: IndexedStack(index: _selectedIndex, children: screens),
       bottomNavigationBar: BottomNavigationBar(
         onTap: (index) => setState(() {
           _selectedIndex = index;
@@ -45,7 +45,7 @@ class _HScreenState extends State<HScreen> {
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.black,
         backgroundColor: const Color(0xFFFF5A5F),
-        items: [
+        items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
           BottomNavigationBarItem(icon: Icon(Icons.map), label: "Map"),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
@@ -56,11 +56,11 @@ class _HScreenState extends State<HScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => PostEditAdScreen(adId: "Post Ad")),
+                  MaterialPageRoute(builder: (context) => const PostEditAdScreen(adId: "Post Ad")),
                 );
               },
               backgroundColor: const Color(0xFFFF5A5F),
-              label: Row(children: [
+              label: const Row(children: [
                 Text(
                   "Post AD",
                   style: TextStyle(
@@ -103,7 +103,7 @@ class _HScreenState extends State<HScreen> {
             final adData = ads[index].data() as Map<String, dynamic>;
             final adId = ads[index].id;
 
-            return AdsHomeScreen(adData: adData, adId: adId);
+            return AdHomeScreen(adData: adData, adId: adId);
           },
         );
       },

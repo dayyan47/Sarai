@@ -1,21 +1,22 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class SaveLocationScreen extends StatefulWidget {
+  const SaveLocationScreen({super.key});
+
   @override
   _SaveLocationScreenState createState() => _SaveLocationScreenState();
 }
 
 class _SaveLocationScreenState extends State<SaveLocationScreen>{
 
-  Completer<GoogleMapController> _controller = Completer();
+  final Completer<GoogleMapController> _controller = Completer();
   // on below line we have specified camera position
-  static final CameraPosition _kGoogle = const CameraPosition(target: LatLng(31.582045, 74.329376), zoom: 15);
+  static const CameraPosition _kGoogle = CameraPosition(target: LatLng(31.582045, 74.329376), zoom: 15);
 
-  final List<Marker> _markers = <Marker>[ Marker(
+  final List<Marker> _markers = <Marker>[ const Marker(
       markerId: MarkerId('1'),
       position: LatLng(20.42796133580664, 75.885749655962),
       infoWindow: InfoWindow(
@@ -25,7 +26,7 @@ class _SaveLocationScreenState extends State<SaveLocationScreen>{
   Future<Position> getUserCurrentLocation() async {
     await Geolocator.requestPermission().then((value){}).onError((error, stackTrace) async {
       await Geolocator.requestPermission();
-      print("ERROR"+error.toString());
+      print("ERROR$error");
     });
     return await Geolocator.getCurrentPosition();
   }
@@ -35,7 +36,7 @@ class _SaveLocationScreenState extends State<SaveLocationScreen>{
     // Implement your map view here
     return Scaffold(
       appBar: AppBar(
-        title: Text('Save Location'),
+        title: const Text('Save Location'),
       ),
       body: GoogleMap(
           zoomControlsEnabled: false,
@@ -48,14 +49,14 @@ class _SaveLocationScreenState extends State<SaveLocationScreen>{
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async{
           getUserCurrentLocation().then((value) async {
-            print(value.latitude.toString() +" "+value.longitude.toString());
+            print("${value.latitude} ${value.longitude}");
             // marker added for current users location
             _markers.add( Marker(
-              markerId: MarkerId("2"),
+              markerId: const MarkerId("2"),
               position: LatLng(value.latitude, value.longitude),));
 
             // specified current users location
-            CameraPosition cameraPosition = new CameraPosition(
+            CameraPosition cameraPosition = CameraPosition(
               target: LatLng(value.latitude, value.longitude),
               zoom: 14,
             );
@@ -64,8 +65,8 @@ class _SaveLocationScreenState extends State<SaveLocationScreen>{
             setState(() {});
           });
         },
-        backgroundColor: Color(0xFFFF5A5F),
-        label: Text("Save Location"),
+        backgroundColor: const Color(0xFFFF5A5F),
+        label: const Text("Save Location"),
         // child: Icon(Icons.location_on_rounded),
 
       ),

@@ -1,13 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:hostel_add/Hostel/hostel_room_Detail.dart';
+import 'package:hostel_add/Hostel/Hostel_Room_Detail.dart';
 
 class RoomDetail extends StatefulWidget {
   final String adId;
 
-  RoomDetail({required this.adId});
+  const RoomDetail({super.key, required this.adId});
 
   @override
   _RoomDetailState createState() => _RoomDetailState();
@@ -56,7 +55,7 @@ class _RoomDetailState extends State<RoomDetail> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             // Loading indicator while fetching data.
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (snapshot.hasError) {
@@ -66,7 +65,7 @@ class _RoomDetailState extends State<RoomDetail> {
 
           if (!snapshot.hasData || !snapshot.data!.exists) {
             // Handle case when ad data doesn't exist.
-            return Center(child: Text('Ad not found'));
+            return const Center(child: Text('Ad not found'));
           }
 
           final adData = snapshot.data!.data() as Map<String, dynamic>;

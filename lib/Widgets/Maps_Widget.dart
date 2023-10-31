@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class MapViewScreen extends StatefulWidget {
+  const MapViewScreen({super.key});
+
   @override
   _MapViewScreenState createState() => _MapViewScreenState();
 }
@@ -17,13 +20,13 @@ class _MapViewScreenState extends State<MapViewScreen> {
     return querySnapshot.docs;
   }
 
-  Completer<GoogleMapController> _controller = Completer();
+  final Completer<GoogleMapController> _controller = Completer();
 
-  static final CameraPosition _kGoogle =
-      const CameraPosition(target: LatLng(31.582045, 74.329376), zoom: 15);
+  static const CameraPosition _kGoogle =
+      CameraPosition(target: LatLng(31.582045, 74.329376), zoom: 15);
 
   final List<Marker> _markers = <Marker>[
-    Marker(
+    const Marker(
         markerId: MarkerId('1'),
         position: LatLng(31.582045, 74.329376),
         infoWindow: InfoWindow(
@@ -31,19 +34,34 @@ class _MapViewScreenState extends State<MapViewScreen> {
         )),
   ];
 
-  Future<Position> getUserCurrentLocation() async {
-    await Geolocator.requestPermission()
-        .then((value) {})
-        .onError((error, stackTrace) async {
-      await Geolocator.requestPermission();
-      print("ERROR" + error.toString());
-    });
-    return await Geolocator.getCurrentPosition();
+   getUserCurrentLocation() async {
+    // await Geolocator.requestPermission()
+    //     .then((value) {})
+    //     .onError((error, stackTrace) async {
+    //   await Geolocator.requestPermission();
+    //   print("ERROR$error");
+    // });
+    bool isLocationPermissionGranted = await Permission.location.isGranted;
+    if(isLocationPermissionGranted) {
+      return await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+    }
+    else{
+      Fluttertoast.showToast(
+          msg: "Please grant Location permission first!",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 2,
+          textColor: Colors.white,
+          fontSize: 10.0);
+      openAppSettings();
+      return null;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
         child: Stack(
@@ -62,8 +80,8 @@ class _MapViewScreenState extends State<MapViewScreen> {
               bottom: 15.0, // Places the FAB on top of the bottom app bar
               right: 20.0,
               child: FloatingActionButton.extended(
-                backgroundColor: Color(0xFFFF5A5F),
-                label: Row(children: [
+                backgroundColor: const Color(0xFFFF5A5F),
+                label: const Row(children: [
                   Text("Current Location",
                       style: TextStyle(color: Colors.white)),
                   SizedBox(width: 4.0),
@@ -71,17 +89,15 @@ class _MapViewScreenState extends State<MapViewScreen> {
                 ]),
                 onPressed: () async {
                   getUserCurrentLocation().then((value) async {
-                    print(value.latitude.toString() +
-                        " " +
-                        value.longitude.toString());
+                    print("${value.latitude} ${value.longitude}");
                     // marker added for current users location
                     _markers.add(Marker(
-                      markerId: MarkerId("2"),
+                      markerId: const MarkerId("2"),
                       position: LatLng(value.latitude, value.longitude),
                     ));
 
                     // specified current users location
-                    CameraPosition cameraPosition = new CameraPosition(
+                    CameraPosition cameraPosition = CameraPosition(
                       target: LatLng(value.latitude, value.longitude),
                       zoom: 14,
                     );

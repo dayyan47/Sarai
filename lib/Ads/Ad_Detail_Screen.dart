@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hostel_add/Ads/Post_Edit_Ads.dart';
+import 'package:modern_form_line_awesome_icons/modern_form_line_awesome_icons.dart';
 
 class AdDetailScreen extends StatefulWidget {
   final String adId;
 
-  AdDetailScreen({required this.adId});
+  const AdDetailScreen({super.key, required this.adId});
 
   @override
   _AdDetailScreenState createState() => _AdDetailScreenState();
@@ -14,13 +15,33 @@ class AdDetailScreen extends StatefulWidget {
 
 class _AdDetailScreenState extends State<AdDetailScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  bool _isAdOwner =
-      false; // If the User is logged-in, user is the owner of the ad.
+  final _user = FirebaseAuth.instance.currentUser;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  bool _isAdOwner = false;
+  bool _isFav = false;
+  Icon favIcon = const Icon(LineAwesomeIcons.heart, color: Colors.white);
+  Icon unFavIcon = const Icon(LineAwesomeIcons.heart_o, color: Colors.white);
+  Icon _myIcon = const Icon(LineAwesomeIcons.heart_o, color: Colors.white);
 
   @override
   void initState() {
     super.initState();
     _checkIfUserIsAdOwner();
+    _checkIfAdIsFav(); //check if the logged in user has this ad as fav, then turn logo to fav
+  }
+
+  Future<void> _checkIfAdIsFav() async {
+    final userData = await _firestore.collection('users').doc(_user?.uid).get();
+    if (userData.exists || userData.data() != null) {
+      List ads = userData.get("fav_ads");
+      if (ads.contains(widget.adId)) {
+        setState(() {
+          _myIcon = favIcon;
+          _isFav = true;
+        });
+      }
+    }
   }
 
   Future<void> _checkIfUserIsAdOwner() async {
@@ -42,14 +63,59 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     });
   }
 
+  Future<void> _favoriteAd() async {
+    String idToDelete = widget.adId;
+    final userData = await _firestore.collection('users').doc(_user?.uid).get();
+
+    if (_isFav) {
+      List ads = userData.get("fav_ads");
+      if (ads.contains(widget.adId)) {
+        var docRef = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(_user?.uid)
+            .get();
+        docRef.reference.update({
+          'fav_ads': FieldValue.arrayRemove([idToDelete])
+        }).then((_) {
+          print('Document updated successfully');
+        }).catchError((error) {
+          print('Error updating document: $error');
+        });
+      }
+      setState(() {
+        _isFav = false;
+        _myIcon = unFavIcon;
+      });
+    } else {
+      List ads = userData.get("fav_ads");
+      if (!ads.contains(widget.adId)) {
+        var docRef = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(_user?.uid)
+            .get();
+        docRef.reference.update({
+          'fav_ads': FieldValue.arrayUnion([idToDelete])
+        }).then((_) {
+          print('Document updated successfully');
+        }).catchError((error) {
+          print('Error updating document: $error');
+        });
+      }
+      setState(() {
+        _isFav = true;
+        _myIcon = favIcon;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color(0xFFFF5A5F),
-        title: Text('Ad Details',
+        backgroundColor: const Color(0xFFFF5A5F),
+        title: const Text('Ad Details',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        iconTheme: IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.white),
         actions:
             _isAdOwner // Conditionally show the "Edit" button if the logged-in user is the owner of the ad.
                 ? [
@@ -66,9 +132,23 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         );
                       },
                     ),
-                    SizedBox(width: 10)
+                    IconButton(
+                      icon: _myIcon,
+                      onPressed: () {
+                        _favoriteAd();
+                      },
+                    ),
+                    const SizedBox(width: 10)
                   ]
-                : null,
+                : [
+                    IconButton(
+                      icon: _myIcon,
+                      onPressed: () {
+                        _favoriteAd();
+                      },
+                    ),
+                    const SizedBox(width: 10)
+                  ],
       ),
       body: Stack(children: [
         StreamBuilder<DocumentSnapshot>(
@@ -185,19 +265,19 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       const SizedBox(
                         width: 10,
                       ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          const Text(
-                            'Province: ',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text('${adData['province']}')
-                        ],
-                      ),
-                      const SizedBox(
-                        width: 10,
-                      ),
+                      // Column(
+                      //   crossAxisAlignment: CrossAxisAlignment.center,
+                      //   children: [
+                      //     const Text(
+                      //       'Province: ',
+                      //       style: TextStyle(fontWeight: FontWeight.bold),
+                      //     ),
+                      //     Text('${adData['province']}')
+                      //   ],
+                      // ),
+                      // const SizedBox(
+                      //   width: 10,
+                      // ),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [

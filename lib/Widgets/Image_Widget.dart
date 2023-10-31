@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class ImageWidget extends StatelessWidget {
   final String imageUrl;
 
-  ImageWidget({required this.imageUrl});
+  const ImageWidget({super.key, required this.imageUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +14,7 @@ class ImageWidget extends StatelessWidget {
       fit: BoxFit.cover,
     );
     } else {
-      return Icon(Icons.image_not_supported_sharp,
+      return const Icon(Icons.image_not_supported_sharp,
     size: 100,
     color: Colors.grey,);
     } // Return an empty SizedBox if imageUrl is null.

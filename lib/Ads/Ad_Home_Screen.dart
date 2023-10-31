@@ -1,15 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:hostel_add/Ads/Ad_detail%20_screen.dart';
-import '../Hostel/adDetail.dart';
 
-class AdsHomeScreen extends StatelessWidget {
+import 'Ad_Detail_Screen.dart';
+
+class AdHomeScreen extends StatelessWidget {
   final Map<String, dynamic> adData;
   final String adId;
 
-  AdsHomeScreen({super.key, required this.adData, required this.adId});
+  const AdHomeScreen({super.key, required this.adData, required this.adId});
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +22,7 @@ class AdsHomeScreen extends StatelessWidget {
       },
       child: Card(
         elevation: 4,
-        margin: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+        margin: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
         color: Colors.white70,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
@@ -35,12 +32,12 @@ class AdsHomeScreen extends StatelessWidget {
               if (imageUrl != null)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(20),
-                  child: Image.network(
+                  child: Image(image: ResizeImage(NetworkImage(
                     imageUrl,
-                    height: 180,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
+                    //height: 180,
+                    //width: double.infinity,
+                    //fit: BoxFit.cover,
+                  ), width: MediaQuery.of(context).size.width.toInt(), height: 350)),
                 ),
               Padding(
                 padding: const EdgeInsets.all(8.0),

@@ -2,11 +2,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hostel_add/UserAuth/Forget_Password.dart';
-import 'package:hostel_add/UserAuth/Signup_Screen.dart';
+import 'package:hostel_add/UserAuth/SignUp_Screen.dart';
 import 'package:hostel_add/Home_Screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -37,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     if(isLoggedIn){
       Navigator.pushAndRemoveUntil(context,
-          MaterialPageRoute(builder: (context) => HScreen()),
+          MaterialPageRoute(builder: (context) => const HScreen()),
               (Route<dynamic> r)=> false);
     }
 
@@ -55,7 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
         prefs.setBool('isLoggedIn', _isLoggedIn);
 
         Navigator.pushAndRemoveUntil(context,
-            MaterialPageRoute(builder: (context) => HScreen()),
+            MaterialPageRoute(builder: (context) => const HScreen()),
                 (Route<dynamic> r)=> false);
 
         print('Logged in as ${userCredential.user?.email}');
@@ -96,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
             width: MediaQuery.of(context).size.width,
             height: MediaQuery.of(context).size.height,
             color: Colors.white,
-            padding: EdgeInsets.all(20.0),
+            padding: const EdgeInsets.all(20.0),
             child: Form(
               key: _formKey,
               child: Column(
@@ -145,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           context,
                           MaterialPageRoute(
                               builder: (context) =>
-                                  ResetPasswordScreen())), // Navigate to Reset Password Screen
+                                  const ResetPasswordScreen())), // Navigate to Reset Password Screen
                     ),
                   ),
                   ElevatedButton(
@@ -162,7 +164,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => SignUpScreen())),
+                            builder: (context) => const SignUpScreen())),
                     // Navigate to signup screen
                     child: const Text(
                       'Dont Have an account? SignUp',

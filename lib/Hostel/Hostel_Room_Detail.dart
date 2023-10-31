@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:modern_form_line_awesome_icons/modern_form_line_awesome_icons.dart';
 
 class HostelRoomDetail extends StatelessWidget {
   final Map<String, dynamic> adData;
 
-  HostelRoomDetail({required this.adData});
+  const HostelRoomDetail({super.key, required this.adData});
 
   @override
   Widget build(BuildContext context) {
@@ -18,11 +17,11 @@ class HostelRoomDetail extends StatelessWidget {
 
     return Expanded(
       child: ListView(
-        physics: BouncingScrollPhysics(),
+        physics: const BouncingScrollPhysics(),
         shrinkWrap: true,
         children: [
           Padding(
-            padding: EdgeInsets.only(
+            padding: const EdgeInsets.only(
               bottom: 30,
               left: 30,
               right: 30,
@@ -35,12 +34,12 @@ class HostelRoomDetail extends StatelessWidget {
                   children: [
                     Text(
                       'Price: ${adData['price']}',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 5,
                     ),
                     Text(
@@ -55,7 +54,7 @@ class HostelRoomDetail extends StatelessWidget {
                 ),
                 Text(
                   'City: ${adData['city']}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
@@ -63,9 +62,9 @@ class HostelRoomDetail extends StatelessWidget {
               ],
             ),
           ),
-          Padding(
+          const Padding(
             padding:
-            const EdgeInsets.only(left: 30, bottom: 30),
+            EdgeInsets.only(left: 30, bottom: 30),
             child: Text(
               'Hostel Information',
               style: TextStyle(
@@ -74,14 +73,14 @@ class HostelRoomDetail extends StatelessWidget {
               ),
             ),
           ),
-          Container(
+          SizedBox(
             height: 130,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              physics: BouncingScrollPhysics(),
+              physics: const BouncingScrollPhysics(),
               children: [
                 Padding(
-                  padding: EdgeInsets.only(
+                  padding: const EdgeInsets.only(
                     left: 30,
                     bottom: 30,
                   ),
@@ -97,7 +96,7 @@ class HostelRoomDetail extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
+                        const Text(
                           'Gender',
                           style: TextStyle(
                             fontSize: 10,
@@ -105,23 +104,23 @@ class HostelRoomDetail extends StatelessWidget {
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        SizedBox(
+                        const SizedBox(
                           height: 10,
                         ),
                         if (adData['gender'] == 'Boys Hostel')
-                          Icon(
+                          const Icon(
                             Icons.boy, // Display a boy icon if gender is 'Boy'
                             size: 50,
                             color: Colors.blue, // You can adjust the color
                           )
                         else if (adData['gender'] == 'Girls Hostel')
-                          Icon(
+                          const Icon(
                             Icons.girl, // Display a girl icon if gender is 'Girl'
                             size: 30,
                             color: Colors.pink, // You can adjust the color
                           )
                         else
-                          Text(
+                          const Text(
                             'Unknown Gender', // Display this text if gender is neither 'Boy' nor 'Girl'
                             style: TextStyle(
                               fontSize: 10,
@@ -133,7 +132,7 @@ class HostelRoomDetail extends StatelessWidget {
                   )
                 ),
                 Padding(
-                    padding: EdgeInsets.only(
+                    padding: const EdgeInsets.only(
                       left: 30,
                       bottom: 30,
                     ),
@@ -149,7 +148,7 @@ class HostelRoomDetail extends StatelessWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
+                          const Text(
                             'AC',
                             style: TextStyle(
                               fontSize: 10,
@@ -157,23 +156,23 @@ class HostelRoomDetail extends StatelessWidget {
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          SizedBox(
+                          const SizedBox(
                             height: 10,
                           ),
                           if (adData['AC'] == 'Yes')
-                            Icon(
+                            const Icon(
                               Icons.ac_unit_sharp,
                               size: 50,
                               color: Colors.blue, // You can adjust the color
                             )
                           else if (adData['AC'] == 'No')
-                            Icon(
+                            const Icon(
                               Icons.cancel_sharp,
                               size: 30,
                               color: Colors.pink, // You can adjust the color
                             )
                           else
-                            Text(
+                            const Text(
                               'Ac Available on demand',
                               style: TextStyle(
                                 fontSize: 10,
@@ -185,7 +184,7 @@ class HostelRoomDetail extends StatelessWidget {
                     )
                 ),
                 Padding(
-                    padding: EdgeInsets.only(
+                    padding: const EdgeInsets.only(
                       left: 30,
                       bottom: 30,
                     ),
@@ -201,7 +200,7 @@ class HostelRoomDetail extends StatelessWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
+                          const Text(
                             'UPS',
                             style: TextStyle(
                               fontSize: 10,
@@ -209,23 +208,23 @@ class HostelRoomDetail extends StatelessWidget {
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          SizedBox(
+                          const SizedBox(
                             height: 10,
                           ),
                           if (adData['UPS'] == 'Yes')
-                            Icon(
+                            const Icon(
                               Icons.battery_std_sharp,
                               size: 50,
                               color: Colors.blue, // You can adjust the color
                             )
                           else if (adData['UPS'] == 'No')
-                            Icon(
+                            const Icon(
                               Icons.battery_alert_sharp,
                               size: 30,
                               color: Colors.pink, // You can adjust the color
                             )
                           else
-                            Text(
+                            const Text(
                               'No Ups Available',
                               style: TextStyle(
                                 fontSize: 10,
@@ -237,7 +236,7 @@ class HostelRoomDetail extends StatelessWidget {
                     )
                 ),
                 Padding(
-                    padding: EdgeInsets.only(
+                    padding: const EdgeInsets.only(
                       left: 30,
                       bottom: 30,
                     ),
@@ -253,7 +252,7 @@ class HostelRoomDetail extends StatelessWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
+                          const Text(
                             'Internet',
                             style: TextStyle(
                               fontSize: 10,
@@ -261,23 +260,23 @@ class HostelRoomDetail extends StatelessWidget {
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          SizedBox(
+                          const SizedBox(
                             height: 10,
                           ),
                           if (adData['Internet'] == 'Yes')
-                            Icon(
+                            const Icon(
                               Icons.wifi_2_bar_sharp,
                               size: 50,
                               color: Colors.blue, // You can adjust the color
                             )
                           else if (adData['Internet'] == 'No')
-                            Icon(
+                            const Icon(
                               Icons.portable_wifi_off_sharp,
                               size: 30,
                               color: Colors.pink, // You can adjust the color
                             )
                           else
-                            Text(
+                            const Text(
                               'No Internet Available',
                               style: TextStyle(
                                 fontSize: 10,
@@ -289,7 +288,7 @@ class HostelRoomDetail extends StatelessWidget {
                     )
                 ),
                 Padding(
-                    padding: EdgeInsets.only(
+                    padding: const EdgeInsets.only(
                       left: 30,
                       bottom: 30,
                     ),
@@ -305,7 +304,7 @@ class HostelRoomDetail extends StatelessWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
+                          const Text(
                             'Rooms',
                             style: TextStyle(
                               fontSize: 10,
@@ -313,35 +312,35 @@ class HostelRoomDetail extends StatelessWidget {
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          SizedBox(
+                          const SizedBox(
                             height: 10,
                           ),
                           if (adData['Rooms'] == 'Single')
-                            Icon(
+                            const Icon(
                               Icons.single_bed,
                               size: 50,
                               color: Colors.blue, // You can adjust the color
                             )
                           else if (adData['Rooms'] == 'Double')
-                            Icon(
+                            const Icon(
                               Icons.person_2_rounded,
                               size: 30,
                               color: Colors.pink, // You can adjust the color
                             )
                           else if (adData['Rooms'] == 'Triple')
-                              Icon(
+                              const Icon(
                                 Icons.three_mp,
                                 size: 30,
                                 color: Colors.pink, // You can adjust the color
                               )
                             else if (adData['Rooms'] == 'Quad')
-                                Icon(
+                                const Icon(
                                   Icons.four_mp,
                                   size: 30,
                                   color: Colors.pink, // You can adjust the color
                                 )
                           else
-                            Text(
+                            const Text(
                               'No Room Available',
                               style: TextStyle(
                                 fontSize: 10,
@@ -353,7 +352,7 @@ class HostelRoomDetail extends StatelessWidget {
                     )
                 ),
                 Padding(
-                    padding: EdgeInsets.only(
+                    padding: const EdgeInsets.only(
                       left: 30,
                       bottom: 30,
                     ),
@@ -369,7 +368,7 @@ class HostelRoomDetail extends StatelessWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
+                          const Text(
                             'Parking',
                             style: TextStyle(
                               fontSize: 10,
@@ -377,23 +376,23 @@ class HostelRoomDetail extends StatelessWidget {
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          SizedBox(
+                          const SizedBox(
                             height: 10,
                           ),
                           if (adData['Parking'] == 'Yes')
-                            Icon(
+                            const Icon(
                               Icons.local_parking_sharp,
                               size: 50,
                               color: Colors.blue, // You can adjust the color
                             )
                           else if (adData['Parking'] == 'No')
-                            Icon(
+                            const Icon(
                               Icons.cancel_sharp,
                               size: 30,
                               color: Colors.pink, // You can adjust the color
                             )
                           else
-                            Text(
+                            const Text(
                               'No Parking Available',
                               style: TextStyle(
                                 fontSize: 10,
@@ -410,7 +409,7 @@ class HostelRoomDetail extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: EdgeInsets.only(
+            padding: const EdgeInsets.only(
               left: 30,
               right: 30,
               bottom: 30 * 4,

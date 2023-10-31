@@ -4,6 +4,8 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hostel_add/UserAuth/Login_Screen.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
+  const ResetPasswordScreen({super.key});
+
   @override
   _ResetPasswordScreenState createState() => _ResetPasswordScreenState();
 }
@@ -25,7 +27,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             timeInSecForIosWeb: 2,
             textColor: Colors.white,
             fontSize: 10.0);
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>LoginScreen()));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>const LoginScreen()));
         // Password reset email sent successfully
         setState(() {
           _errorMessage = 'Password reset email sent. Please check your email.';
@@ -47,14 +49,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(backgroundColor: Color(0xFFFF5A5F),
-          title: Text('Reset Password', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          iconTheme: IconThemeData(color: Colors.white)
+      appBar: AppBar(backgroundColor: const Color(0xFFFF5A5F),
+          title: const Text('Reset Password', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          iconTheme: const IconThemeData(color: Colors.white)
       ),
       body: Container(
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Column(
@@ -63,7 +65,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             children: <Widget>[
               TextFormField(
                 controller: _emailController,
-                decoration: InputDecoration(labelText: 'Email'),
+                decoration: const InputDecoration(labelText: 'Email'),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
                   if (value!.isEmpty) {
@@ -72,10 +74,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   return null;
                 },
               ),
-              SizedBox(height: 20),
-              ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Color(0xFFFF5A5F)),
+              const SizedBox(height: 20),
+              ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF5A5F)),
                 onPressed: _resetPassword,
-                child: Text('Reset Password', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text('Reset Password', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
