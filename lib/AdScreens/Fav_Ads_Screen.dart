@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'Ad_Home_Screen.dart';
+import '../Widgets/Ad_Home_Screen_Widget.dart';
 
 class FavAdsScreen extends StatefulWidget {
   const FavAdsScreen({super.key});
@@ -14,6 +14,21 @@ class FavAdsScreen extends StatefulWidget {
 class _FavAdsScreenState extends State<FavAdsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final _user = FirebaseAuth.instance.currentUser;
+
+  Future<void> _removeDeletedAdsFromFavAds(List ads, ) async {
+    final currentUserData = await _firestore.collection('users').doc(_user?.uid).get();
+    if (ads.isNotEmpty) {
+      for (var ad in ads) {
+        DocumentSnapshot<Map<String, dynamic>> newAd =
+        await _firestore.collection('ads').doc(ad).get();
+        if (!newAd.exists) {
+          currentUserData.reference.update({
+            'fav_ads': FieldValue.arrayRemove([ad])
+          });
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,20 +56,25 @@ class _FavAdsScreenState extends State<FavAdsScreen> {
                           return const Center(
                               child: CircularProgressIndicator());
                         }
-                        if (!snapshot.hasData|| !snapshot.data!.exists) {
+                        if (!snapshot.hasData || !snapshot.data!.exists) {
                           return const Center(
-                            child: Text('You have no Favorite Ads.'), // to do
+                            child: Text('User have no Favorite Ads.'), // to do
                           );
                         }
 
                         final List ads = snapshot.data!.get("fav_ads");
-                        if (!ads.isEmpty)
+                        // to unfav ads that were deleted by users
+                        _removeDeletedAdsFromFavAds(ads);
+
+                        if (!ads.isEmpty) {
                           return StreamBuilder<QuerySnapshot>(
                               stream: _firestore
                                   .collection('ads')
                                   .where(FieldPath.documentId, whereIn: ads)
+                                  //.orderBy("timestamp", descending: true)
                                   .snapshots(),
                               builder: (context, snapshot) {
+                                List favoriteAds = [];
                                 if (!snapshot.hasData) {
                                   return const Center(
                                       child: CircularProgressIndicator());
@@ -64,7 +84,15 @@ class _FavAdsScreenState extends State<FavAdsScreen> {
                                     child: Text('You have no Favorite Ads.'),
                                   );
                                 }
-                                final favoriteAds = snapshot.data!.docs;
+                                if (snapshot.data != null) {
+                                  favoriteAds = snapshot.data!.docs;
+                                  favoriteAds.sort((a, b) {
+                                    Timestamp timestampA = a['timestamp'];
+                                    Timestamp timestampB = b['timestamp'];
+                                    return timestampB.compareTo(timestampA);
+                                  });
+                                }
+
                                 return ListView.builder(
                                     itemCount: favoriteAds.length,
                                     itemBuilder: (context, index) {
@@ -75,11 +103,13 @@ class _FavAdsScreenState extends State<FavAdsScreen> {
                                           adData: adData, adId: adId);
                                     });
                               });
-                        else
+                        } else {
                           return const Center(
                             child: Text('You have no Favorite Ads.'), // to do
                           );
+                        }
                       }))
             ]));
   }
+
 }

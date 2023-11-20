@@ -23,21 +23,23 @@ class _EditProfileState extends State<EditProfile> {
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  User? user;
-  String? profileImageUrl;
-  String? oldPassword;
-  String? newPassword;
-  File? newProfileImage;
-  DateTime _selectedDate = DateTime.now();
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _phoneNumController = TextEditingController();
   final TextEditingController _dobController = TextEditingController();
   RegExp pakistanPhoneRegExp = RegExp(r'^03[0-9]{2}[0-9]{7}$');
-  bool _isLoading = false;
+
+  User? user;
+  File? newProfileImage;
+  String? profileImageUrl;
+  String? oldPassword;
+  String? newPassword;
+
+  DateTime _selectedDate = DateTime.now();
   bool _isOldVisible = true;
   Icon oldPasswordVisible = const Icon(LineAwesomeIcons.eye_slash);
   bool _isNewVisible = true;
   Icon newPasswordVisible = const Icon(LineAwesomeIcons.eye_slash);
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -60,6 +62,7 @@ class _EditProfileState extends State<EditProfile> {
   }
 
   Future<void> _getImageFromGallery() async {
+    await [Permission.camera, Permission.storage, Permission.photos].request();
     bool isStoragePermissionGranted = await Permission.storage.isGranted;
     //bool isGalleryPermissionGranted = await Permission.photos.isGranted; // for ios
 
@@ -84,6 +87,7 @@ class _EditProfileState extends State<EditProfile> {
   }
 
   Future<void> _getImageFromCamera() async {
+    await [Permission.camera, Permission.storage, Permission.photos].request();
     bool isCameraPermissionGranted = await Permission.camera.isGranted;
     if (isCameraPermissionGranted) {
       final pickedFile =
@@ -106,7 +110,8 @@ class _EditProfileState extends State<EditProfile> {
     }
   }
 
-  Future showOptions() async {
+  void showOptions() {
+
     showCupertinoModalPopup(
       context: context,
       builder: (context) => CupertinoActionSheet(
@@ -145,29 +150,8 @@ class _EditProfileState extends State<EditProfile> {
     }
   }
 
-  // Future<void> _uploadImage() async {
-  //   if (newProfileImage != null) {
-  //     final Reference storageRef =
-  //         _storage.ref().child('profile_images').child(user!.uid);
-  //     final UploadTask uploadTask = storageRef.putFile(newProfileImage!);
-  //     final TaskSnapshot snapshot = await uploadTask.whenComplete(() => null);
-  //
-  //     if (snapshot.state == TaskState.success) {
-  //       final String downloadUrl = await storageRef.getDownloadURL();
-  //
-  //       await _firestore.collection('users').doc(user?.uid).update({
-  //         'profile_image_url': downloadUrl,
-  //       });
-  //
-  //       setState(() {
-  //         profileImageUrl = downloadUrl;
-  //         newProfileImage = null;
-  //       });
-  //     }
-  //   }
-  // }
-
   Future<void> _updateUserData() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (_formKey.currentState!.validate()) {
       _formKey.currentState?.save();
 
@@ -175,11 +159,20 @@ class _EditProfileState extends State<EditProfile> {
         _isLoading = true;
       });
 
-      try{
-        final credential = EmailAuthProvider.credential(email: user!.email!, password: oldPassword!,);
+      try {
+        final credential = EmailAuthProvider.credential(
+          email: user!.email!,
+          password: oldPassword!,
+        );
         await user!.reauthenticateWithCredential(credential);
-      } catch (e){
-        Fluttertoast.showToast(msg: "Old Password incorrect!");
+      } catch (e) {
+        Fluttertoast.showToast(
+            msg: "Old Password Incorrect!",
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 2,
+            textColor: Colors.white,
+            fontSize: 10.0);
         setState(() {
           _isLoading = false;
         });
@@ -198,7 +191,7 @@ class _EditProfileState extends State<EditProfile> {
           'date_of_birth': _dobController.text,
         });
         if (newProfileImage != null) {
-          if(profileImageUrl != null && profileImageUrl != "") {
+          if (profileImageUrl != null && profileImageUrl != "") {
             await _storage
                 .ref()
                 .child('profile_images/${user?.uid}.jpg')
@@ -219,22 +212,24 @@ class _EditProfileState extends State<EditProfile> {
             });
           }
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile Updated Successfully'),
-            duration: Duration(seconds: 5),
-          ),
-        );
-        //Navigator.pop(context);
+        Fluttertoast.showToast(
+            msg: "Profile Updated Successfully!",
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 2,
+            textColor: Colors.white,
+            fontSize: 10.0);
       } catch (e) {
         setState(() {
           _isLoading = false;
         });
-        Fluttertoast.showToast(msg: e.toString());
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Failed to Update Profile, Please Try Again Later!'),
-          duration: Duration(seconds: 3),
-        ));
+        Fluttertoast.showToast(
+            msg: e.toString(),
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 2,
+            textColor: Colors.white,
+            fontSize: 10.0);
       } finally {
         setState(() {
           _isLoading = false;
@@ -244,30 +239,30 @@ class _EditProfileState extends State<EditProfile> {
     }
   }
 
-  Future<void> _deleteUser() async {
-    try {
-      final user = _auth.currentUser;
-      if (user != null) {
-        await user.delete();
-        Fluttertoast.showToast(
-            msg: "Account deleted successfully!",
-            toastLength: Toast.LENGTH_LONG,
-            gravity: ToastGravity.BOTTOM,
-            timeInSecForIosWeb: 2,
-            textColor: Colors.white,
-            fontSize: 10.0);
-
-        print("User deleted successfully.");
-
-        //delete all ads of this user too!
-        //Navigate to login screen and clear shared prefs here
-      } else {
-        print("No user is currently signed in.");
-      }
-    } catch (e) {
-      print("Error deleting user: $e");
-    }
-  }
+  // Future<void> _deleteUser() async {
+  //   try {
+  //     if (user != null) {
+  //       await user!.delete();
+  //       Fluttertoast.showToast(
+  //           msg: "Account deleted successfully!",
+  //           toastLength: Toast.LENGTH_LONG,
+  //           gravity: ToastGravity.BOTTOM,
+  //           timeInSecForIosWeb: 2,
+  //           textColor: Colors.white,
+  //           fontSize: 10.0);
+  //
+  //       print("User deleted successfully.");
+  //
+  //       //To Do:
+  //       //delete all ads of this user too!
+  //       //Navigate to login screen and clear shared prefs here
+  //     } else {
+  //       print("No user is currently signed in.");
+  //     }
+  //   } catch (e) {
+  //     print("Error deleting user: $e");
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -409,7 +404,7 @@ class _EditProfileState extends State<EditProfile> {
                                             LineAwesomeIcons.eye_slash);
                                       }
                                     });
-                                  }, // to do show password
+                                  },
                                 )),
                             validator: (value) {
                               if (value!.isEmpty) {
@@ -449,16 +444,16 @@ class _EditProfileState extends State<EditProfile> {
                               if (value!.isEmpty) {
                                 return 'Please enter your new password';
                               }
-                              if (!RegExp(r'[A-Z]').hasMatch(value)) {
-                                return 'Password must contain at least 1 capital letter';
-                              }
-                              if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]')
-                                  .hasMatch(value)) {
-                                return 'Password must contain at least 1 special character';
-                              }
-                              if (!RegExp(r'[0-9]').hasMatch(value)) {
-                                return 'Password must contain at least 1 numeric character';
-                              }
+                              // if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                              //   return 'Password must contain at least 1 capital letter';
+                              // }
+                              // if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]')
+                              //     .hasMatch(value)) {
+                              //   return 'Password must contain at least 1 special character';
+                              // }
+                              // if (!RegExp(r'[0-9]').hasMatch(value)) {
+                              //   return 'Password must contain at least 1 numeric character';
+                              // }
                               if (value.length < 8) {
                                 return 'Password must be at least 8 characters long';
                               }

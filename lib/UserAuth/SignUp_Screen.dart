@@ -4,10 +4,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:hostel_add/UserAuth/Login_Screen.dart';
+import 'package:hostel_add/UserAuth/Email_Verification.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:modern_form_line_awesome_icons/modern_form_line_awesome_icons.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -22,18 +23,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
+  bool _isLoading = false;
+  bool _isPasswordVisible = true;
+
   String _email = '';
   String _password = '';
   String _fullName = '';
   String _phoneNumber = '';
   String _dateOfBirth = '';
-  String _errorMessage = '';
   File? _profileImage;
-  DateTime _selectedDate = DateTime.now();
-  bool _isLoading = false;
-
-  final TextEditingController _dobController = TextEditingController();
   RegExp pakistanPhoneRegExp = RegExp(r'^03[0-9]{2}[0-9]{7}$');
+  final TextEditingController _dobController = TextEditingController();
+  Icon passwordVisible = const Icon(LineAwesomeIcons.eye_slash);
+  DateTime _selectedDate = DateTime.now();
 
   Future<void> _getImageFromGallery() async {
     bool isStoragePermissionGranted = await Permission.storage.isGranted;
@@ -41,7 +43,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     if (isStoragePermissionGranted) {
       final pickedFile =
-      await ImagePicker().pickImage(source: ImageSource.gallery);
+          await ImagePicker().pickImage(source: ImageSource.gallery);
       if (pickedFile != null) {
         setState(() {
           _profileImage = File(pickedFile.path);
@@ -63,7 +65,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     bool isCameraPermissionGranted = await Permission.camera.isGranted;
     if (isCameraPermissionGranted) {
       final pickedFile =
-      await ImagePicker().pickImage(source: ImageSource.camera);
+          await ImagePicker().pickImage(source: ImageSource.camera);
 
       if (pickedFile != null) {
         setState(() {
@@ -83,6 +85,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future showOptions() async {
+    await [Permission.camera, Permission.storage, Permission.photos].request();
+
     showCupertinoModalPopup(
       context: context,
       builder: (context) => CupertinoActionSheet(
@@ -106,14 +110,59 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+        context: context,
+        initialEntryMode: DatePickerEntryMode.calendar,
+        initialDate: _selectedDate,
+        firstDate: DateTime(1947),
+        lastDate: _selectedDate);
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+        _dobController.text = DateFormat('dd/MM/yyyy').format(picked);
+      });
+    }
+  }
+
+  Future<void> _sendVerificationEmail() async {
+    User? user = _auth.currentUser;
+
+    if (user != null && !user.emailVerified) {
+      try {
+        await user.sendEmailVerification();
+        Fluttertoast.showToast(
+            msg: "Verification email sent!",
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 2,
+            textColor: Colors.white,
+            fontSize: 10.0);
+        print('Verification email sent');
+      } catch (e) {
+        Fluttertoast.showToast(
+            msg: "Error sending verification email",
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 2,
+            textColor: Colors.white,
+            fontSize: 10.0);
+        print('Error sending verification email: $e');
+      }
+    }
+  }
+
   Future<void> _signUpWithEmailAndPassword() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (_formKey.currentState!.validate()) {
       _formKey.currentState?.save();
       try {
         setState(() {
           _isLoading = true;
         });
-        final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(email: _email, password: _password);
+
+        final UserCredential userCredential = await _auth
+            .createUserWithEmailAndPassword(email: _email, password: _password);
 
         // Upload the profile image to FirebaseStorage
         if (_profileImage != null) {
@@ -148,207 +197,212 @@ class _SignUpScreenState extends State<SignUpScreen> {
             'fav_ads': [],
           });
         }
-        // After Successful signup, you can navigate to the login screen
-        // Navigator.push(context,
-        //     MaterialPageRoute(builder: (context) => const LoginScreen()));
+        Fluttertoast.showToast(
+            msg: "Sign Up Successfully!",
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 2,
+            textColor: Colors.white,
+            fontSize: 10.0);
 
         print('Signed up as ${userCredential.user?.email}');
         print('Full Name: $_fullName');
         print('Phone Number: $_phoneNumber');
         print('Date of Birth: $_dateOfBirth');
+
+        _sendVerificationEmail();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const EmailVerificationScreen()),
+        );
       } catch (e) {
         // Handle errors (e.g., weak password, email already exists, etc.)
         setState(() {
-          _errorMessage = e.toString();
-          Fluttertoast.showToast(
-              msg: _errorMessage,
-              toastLength: Toast.LENGTH_LONG,
-              gravity: ToastGravity.BOTTOM,
-              timeInSecForIosWeb: 2,
-              textColor: Colors.white,
-              fontSize: 10.0);
-        });
-        print('Error: $_errorMessage');
-      } finally {
-        Navigator.pop(context);
-        setState(() {
           _isLoading = false;
         });
+        Fluttertoast.showToast(
+            msg: e.toString(),
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 2,
+            textColor: Colors.white,
+            fontSize: 10.0);
+        print('Error: $e');
       }
-    }
-  }
-
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-        context: context,
-        initialEntryMode: DatePickerEntryMode.calendar,
-        initialDate: _selectedDate,
-        firstDate: DateTime(1947),
-        lastDate: _selectedDate);
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-        _dobController.text = DateFormat('dd/MM/yyyy').format(picked);
-      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Scaffold(
-          appBar: AppBar(
-              backgroundColor: const Color(0xFFFF5A5F),
-              title: const Text('Sign Up',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
-              iconTheme: const IconThemeData(color: Colors.white)),
-          body: Container(
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.height,
-            padding: const EdgeInsets.all(15.0),
-            child: Form(
-              key: _formKey,
-              child: ListView(
-                children: <Widget>[
-                  GestureDetector(
-                    onTap: showOptions,
-                    child: CircleAvatar(
-                      radius: 70,
-                      backgroundColor: Colors.transparent,
-                      child: _profileImage == null
-                          ? const Icon(Icons.add_a_photo,
-                              size: 50, color: Color(0xFFFF5A5F))
-                          : Image.file(_profileImage!,
-                                      width: 200, height: 200, fit: BoxFit.contain),
+    return WillPopScope(
+      onWillPop: () async => _isLoading ? false : true,
+      child: Stack(
+        children: [
+          Scaffold(
+            appBar: AppBar(
+                backgroundColor: const Color(0xFFFF5A5F),
+                title: const Text('Sign Up',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
+                iconTheme: const IconThemeData(color: Colors.white)),
+            body: Container(
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
+              padding: const EdgeInsets.all(15.0),
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  children: <Widget>[
+                    GestureDetector(
+                      onTap: showOptions,
+                      child: CircleAvatar(
+                        radius: 70,
+                        backgroundColor: Colors.transparent,
+                        child: _profileImage == null
+                            ? const Icon(Icons.add_a_photo,
+                                size: 50, color: Color(0xFFFF5A5F))
+                            : Image.file(_profileImage!,
+                                width: 200, height: 200, fit: BoxFit.contain),
+                      ),
                     ),
-                  ),
-                  TextFormField(
-                    decoration: const InputDecoration(labelText: 'Full Name'),
-                    keyboardType: TextInputType.text,
-                    validator: (value) {
-                      if (value!.isEmpty) {
-                        return 'Please enter your full name';
-                      }
-                      return null;
-                    },
-                    onSaved: (value) => _fullName = value!,
-                  ),
-                  TextFormField(
-                    decoration: const InputDecoration(labelText: 'Email'),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value!.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      return null;
-                    },
-                    onSaved: (value) => _email = value!,
-                  ),
-                  TextFormField(
-                    decoration: const InputDecoration(labelText: 'Password'),
-                    obscureText: true,
-                    validator: (value) {
-                      if (value!.isEmpty) {
-                        return 'Please enter your password';
-                      }
-                      if (!RegExp(r'[A-Z]').hasMatch(value)) {
-                        return 'Password must contain at least 1 capital letter';
-                      }
-                      if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value)) {
-                        return 'Password must contain at least 1 special character';
-                      }
-                      if (!RegExp(r'[0-9]').hasMatch(value)) {
-                        return 'Password must contain at least 1 numeric character';
-                      }
-                      if (value.length < 8) {
-                        return 'Password must be at least 8 characters long';
-                      }
-                      return null;
-                    },
-                    onSaved: (value) => _password = value!,
-                  ),
-                  TextFormField(
-                    decoration:
-                        const InputDecoration(labelText: 'Phone Number'),
-                    keyboardType: TextInputType.phone,
-                    validator: (value) {
-                      if (value!.isEmpty) {
-                        return 'Please enter your Phone Number';
-                      } else if (!pakistanPhoneRegExp.hasMatch(value)) {
-                        return 'Please enter Valid Phone Number';
-                      } else {
+                    TextFormField(
+                      decoration: const InputDecoration(labelText: 'Full Name'),
+                      keyboardType: TextInputType.text,
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return 'Please enter your full name';
+                        }
                         return null;
-                      }
-                    },
-                    onSaved: (value) => _phoneNumber = value!,
-                  ),
-                  TextFormField(
-                    controller: _dobController,
-                    decoration:
-                        const InputDecoration(labelText: 'Date of Birth'),
-                    keyboardType: TextInputType.none,
-                    readOnly: true,
-                    showCursor: false,
-                    validator: (value) {
-                      if (value!.isEmpty) {
-                        return 'Please enter your date of birth';
-                      }
-                      return null;
-                    },
-                    onTap: () => _selectDate(context),
-                    onSaved: (value) => _dateOfBirth = value!,
-                  ),
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF5A5F)),
-                    onPressed: _signUpWithEmailAndPassword,
-                    child: const Text(
-                      'Sign Up',
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold),
+                      },
+                      onSaved: (value) => _fullName = value!,
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                                  const LoginScreen())); // Navigate back to the login screen
-                    },
-                    child: const Text(
-                      'Already have an account? Login',
-                      style: TextStyle(color: Color(0xFFFF5A5F)),
+                    TextFormField(
+                      decoration: const InputDecoration(labelText: 'Email'),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return 'Please enter your email';
+                        }
+                        return null;
+                      },
+                      onSaved: (value) => _email = value!,
                     ),
-                  ),
-                ],
+                    TextFormField(
+                      decoration: InputDecoration(
+                          label: const Text('Password'),
+                          suffixIcon: IconButton(
+                            icon: passwordVisible,
+                            onPressed: () {
+                              setState(() {
+                                if (_isPasswordVisible == true) {
+                                  _isPasswordVisible = false;
+                                  passwordVisible =
+                                      const Icon(LineAwesomeIcons.eye);
+                                } else if (_isPasswordVisible == false) {
+                                  _isPasswordVisible = true;
+                                  passwordVisible =
+                                      const Icon(LineAwesomeIcons.eye_slash);
+                                }
+                              });
+                            },
+                          )),
+                      obscureText: _isPasswordVisible,
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return 'Please enter your password';
+                        }
+                        // if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                        //   return 'Password must contain at least 1 capital letter';
+                        // }
+                        // if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]')
+                        //     .hasMatch(value)) {
+                        //   return 'Password must contain at least 1 special character';
+                        // }
+                        // if (!RegExp(r'[0-9]').hasMatch(value)) {
+                        //   return 'Password must contain at least 1 numeric character';
+                        // }
+                        if (value.length < 8) {
+                          return 'Password must be at least 8 characters long';
+                        }
+                        return null;
+                      },
+                      onSaved: (value) => _password = value!,
+                    ),
+                    TextFormField(
+                      decoration:
+                          const InputDecoration(labelText: 'Phone Number'),
+                      keyboardType: TextInputType.phone,
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return 'Please enter your Phone Number';
+                        } else if (!pakistanPhoneRegExp.hasMatch(value)) {
+                          return 'Please enter Valid Phone Number';
+                        } else {
+                          return null;
+                        }
+                      },
+                      onSaved: (value) => _phoneNumber = value!,
+                    ),
+                    TextFormField(
+                      controller: _dobController,
+                      decoration:
+                          const InputDecoration(labelText: 'Date of Birth'),
+                      keyboardType: TextInputType.none,
+                      readOnly: true,
+                      showCursor: false,
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return 'Please enter your date of birth';
+                        }
+                        return null;
+                      },
+                      onTap: () => _selectDate(context),
+                      onSaved: (value) => _dateOfBirth = value!,
+                    ),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF5A5F)),
+                      onPressed: _signUpWithEmailAndPassword,
+                      child: const Text(
+                        'Sign Up',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text(
+                        'Already have an account? Login',
+                        style: TextStyle(color: Color(0xFFFF5A5F)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        if (_isLoading)
-          Positioned.fill(
-              child: Container(
-                  color: Colors.black.withOpacity(0.8),
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      CupertinoActivityIndicator(
-                          radius: 25, color: Color(0xFFFF5A5F)),
-                      SizedBox(height: 10),
-                      Text('Signing Up...',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              decoration: TextDecoration.none))
-                    ],
-                  )))
-      ],
+          if (_isLoading)
+            Positioned.fill(
+                child: Container(
+                    color: Colors.black.withOpacity(0.8),
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        CupertinoActivityIndicator(
+                            radius: 25, color: Color(0xFFFF5A5F)),
+                        SizedBox(height: 10),
+                        Text('Signing Up...',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                decoration: TextDecoration.none))
+                      ],
+                    )))
+        ],
+      ),
     );
   }
 }
