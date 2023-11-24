@@ -46,7 +46,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          backgroundColor: AppColors.PRIMARY_COLOR,
+          backgroundColor: AppColors.primaryColor,
           title: const Text('Reset Password',
               style:
                   TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -75,7 +75,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               const SizedBox(height: 20),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.PRIMARY_COLOR),
+                    backgroundColor: AppColors.primaryColor),
                 onPressed: _resetPassword,
                 child: const Text('Reset Password',
                     style: TextStyle(

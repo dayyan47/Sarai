@@ -19,8 +19,8 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'SARAI',
       theme: ThemeData(
-        primaryColor: AppColors.PRIMARY_COLOR,
-        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.PRIMARY_COLOR),
+        primaryColor: AppColors.primaryColor,
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primaryColor),
         useMaterial3: true,
       ),
       home: const SplashScreen(),

@@ -84,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(width: 10)
               ]
             : null,
-        backgroundColor: AppColors.PRIMARY_COLOR,
+        backgroundColor: AppColors.primaryColor,
         title: _pages[_selectedIndex],
         centerTitle: true,
         automaticallyImplyLeading: false,
@@ -109,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.black,
-        backgroundColor: AppColors.PRIMARY_COLOR,
+        backgroundColor: AppColors.primaryColor,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
           BottomNavigationBarItem(icon: Icon(Icons.map), label: "Map"),
@@ -132,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const PostEditAdScreen(adId: "Post Ad")),
                       );
                     },
-                    backgroundColor: AppColors.PRIMARY_COLOR,
+                    backgroundColor: AppColors.primaryColor,
                     label: const Row(children: [
                       Text(
                         "Post AD",

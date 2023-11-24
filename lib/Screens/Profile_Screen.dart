@@ -39,7 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     AlertDialog alert = AlertDialog(
       title: const Text("Logout"),
-      content: Text("Are you sure you want to logout?"),
+      content: const Text("Are you sure you want to logout?"),
       actions: [
         noButton,
         yesButton,
@@ -174,7 +174,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 child: profileImageUrl == ""
                                     ? const Icon(Icons.person_sharp,
                                         size: 100,
-                                        color: AppColors.PRIMARY_COLOR)
+                                        color: AppColors.primaryColor)
                                     : CachedNetworkImage(
                                         placeholder: (context, url) =>
                                             const Center(
@@ -192,7 +192,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const EdgeInsets.symmetric(horizontal: 10),
                               decoration: BoxDecoration(
                                 border: Border.all(
-                                    color: AppColors.PRIMARY_COLOR, width: 2),
+                                    color: AppColors.primaryColor, width: 2),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
@@ -208,7 +208,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const EdgeInsets.symmetric(horizontal: 10),
                               decoration: BoxDecoration(
                                 border: Border.all(
-                                    color: AppColors.PRIMARY_COLOR, width: 2),
+                                    color: AppColors.primaryColor, width: 2),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(email,
@@ -232,7 +232,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   shape: RoundedRectangleBorder(
                                     side: const BorderSide(
                                         width: 2,
-                                        color: AppColors.PRIMARY_COLOR),
+                                        color: AppColors.primaryColor),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                 ),
@@ -251,7 +251,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ListTile(
                     shape: RoundedRectangleBorder(
                       side: const BorderSide(
-                          width: 2, color: AppColors.PRIMARY_COLOR),
+                          width: 2, color: AppColors.primaryColor),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     onTap: () {
@@ -265,7 +265,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       height: 40,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(100),
-                        color: AppColors.PRIMARY_COLOR,
+                        color: AppColors.primaryColor,
                       ),
                       child: const Icon(
                         LineAwesomeIcons.bookmark,
@@ -284,7 +284,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       height: 30,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(100),
-                        color: AppColors.PRIMARY_COLOR,
+                        color: AppColors.primaryColor,
                       ),
                       child: const Icon(
                         LineAwesomeIcons.angle_right,
@@ -297,7 +297,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ListTile(
                     shape: RoundedRectangleBorder(
                       side: const BorderSide(
-                          width: 2, color: AppColors.PRIMARY_COLOR),
+                          width: 2, color: AppColors.primaryColor),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     onTap: () {
@@ -311,7 +311,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       height: 40,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(100),
-                        color: AppColors.PRIMARY_COLOR,
+                        color: AppColors.primaryColor,
                       ),
                       child: const Icon(
                         LineAwesomeIcons.heart_o,
@@ -330,7 +330,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       height: 30,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(100),
-                        color: AppColors.PRIMARY_COLOR,
+                        color: AppColors.primaryColor,
                       ),
                       child: const Icon(
                         LineAwesomeIcons.angle_right,
@@ -343,7 +343,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ListTile(
                     shape: RoundedRectangleBorder(
                       side: const BorderSide(
-                          width: 2, color: AppColors.PRIMARY_COLOR),
+                          width: 2, color: AppColors.primaryColor),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     onTap: () => _launchWhatsapp(),
@@ -352,7 +352,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       height: 40,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(100),
-                        color: AppColors.PRIMARY_COLOR,
+                        color: AppColors.primaryColor,
                       ),
                       child: const Icon(
                         LineAwesomeIcons.phone,
@@ -371,7 +371,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       height: 30,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(100),
-                        color: AppColors.PRIMARY_COLOR,
+                        color: AppColors.primaryColor,
                       ),
                       child: const Icon(
                         LineAwesomeIcons.angle_right,
@@ -384,7 +384,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ListTile(
                     shape: RoundedRectangleBorder(
                       side: const BorderSide(
-                          width: 2, color: AppColors.PRIMARY_COLOR),
+                          width: 2, color: AppColors.primaryColor),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     onTap: () => _showAlertDialog(context),
@@ -393,7 +393,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       height: 40,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(100),
-                        color: AppColors.PRIMARY_COLOR,
+                        color: AppColors.primaryColor,
                       ),
                       child: const Icon(
                         LineAwesomeIcons.sign_out,
@@ -412,7 +412,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       height: 30,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(100),
-                        color: AppColors.PRIMARY_COLOR,
+                        color: AppColors.primaryColor,
                       ),
                       child: const Icon(
                         LineAwesomeIcons.angle_right,

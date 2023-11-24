@@ -20,7 +20,7 @@ class _MyAdsScreenState extends State<MyAdsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.PRIMARY_COLOR,
+        backgroundColor: AppColors.primaryColor,
         title: const Text('My Ads',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -51,7 +51,7 @@ class _MyAdsScreenState extends State<MyAdsScreen> {
                           const SizedBox(height: 10),
                           ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.PRIMARY_COLOR),
+                                  backgroundColor: AppColors.primaryColor),
                               onPressed: () {
                                 Navigator.push(
                                   context,

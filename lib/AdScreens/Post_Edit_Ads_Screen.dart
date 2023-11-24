@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:hostel_add/Widgets/CheckBoxFormField_Widget.dart';
 import 'package:hostel_add/Widgets/Other_Location_Widget.dart';
 import 'package:hostel_add/resources/values/colors.dart';
 import 'package:image_picker/image_picker.dart';
@@ -54,6 +55,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
   List<XFile> _images = [];
   List<dynamic> _imageUrls = [];
   List<XFile> _newImages = [];
+  List<dynamic> _selectedRoomTypes = [];
 
   @override
   void initState() {
@@ -92,6 +94,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
         _selectedParkingOption = adData['Parking'];
         _latitude = adData['latitude'];
         _longitude = adData['longitude'];
+        _selectedRoomTypes = adData['room_types'];
         if (adData['image_urls'] != null) {
           _imageUrls = adData['image_urls'];
         }
@@ -251,6 +254,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
             'userId': user.uid,
             'owner': _userName,
             'ownerEmail': user.email,
+            'room_types': _selectedRoomTypes,
             'timestamp': FieldValue.serverTimestamp(),
           };
 
@@ -319,6 +323,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
             'Parking': _selectedParkingOption,
             'latitude': _latitude,
             'longitude': _longitude,
+            'room_types': _selectedRoomTypes
           };
 
           if (_newImages.isNotEmpty) {
@@ -442,7 +447,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
     bool isCameraPermissionGranted = await Permission.camera.isGranted;
     if (isCameraPermissionGranted) {
       final pickedFile =
-      await ImagePicker().pickImage(source: ImageSource.camera);
+          await ImagePicker().pickImage(source: ImageSource.camera);
       if (_isEdit) {
         if (pickedFile != null) {
           setState(() {
@@ -500,7 +505,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
         children: [
           Scaffold(
             appBar: AppBar(
-                backgroundColor: AppColors.PRIMARY_COLOR,
+                backgroundColor: AppColors.primaryColor,
                 title: Text(
                   _isEdit ? 'Edit Your Ad' : 'Post Your Ad',
                   style: const TextStyle(
@@ -578,7 +583,8 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                         ),
                       ),
                     if ((_isEdit && _newImages.isNotEmpty) ||
-                        (_images.isNotEmpty && !_isEdit)) // for new images that are going to be uploaded for edit ad
+                        (_images.isNotEmpty &&
+                            !_isEdit)) // for new images that are going to be uploaded for edit ad
                       SizedBox(
                         height: 200,
                         child: ListView.builder(
@@ -606,7 +612,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                                 _newImages.isNotEmpty))) // for post ad
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.PRIMARY_COLOR),
+                            backgroundColor: AppColors.primaryColor),
                         onPressed: showOptions,
                         child: const Text('Add More Images',
                             style: TextStyle(
@@ -621,7 +627,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                           onPressed: showOptions,
                           icon: const Icon(Icons.add_a_photo),
                           iconSize: 50,
-                          color: AppColors.PRIMARY_COLOR),
+                          color: AppColors.primaryColor),
                     const SizedBox(height: 25),
                     TextFormField(
                       controller: _hostelNameController,
@@ -808,23 +814,6 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      decoration:
-                          const InputDecoration(labelText: 'Select Room Type'),
-                      value: _selectedRoomsOption,
-                      onChanged: (value) =>
-                          setState(() => _selectedRoomsOption = value),
-                      validator: (value) =>
-                          value == null ? 'Please select Room Option' : null,
-                      items: ['Single', 'Double', 'Triple', 'Quad']
-                          .map<DropdownMenuItem<String>>((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
                       decoration: const InputDecoration(labelText: 'Parking'),
                       value: _selectedParkingOption,
                       onChanged: (value) =>
@@ -840,10 +829,121 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       }).toList(),
                     ),
                     const SizedBox(height: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Select Room Type',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                        const SizedBox(height: 10),
+                        CheckboxFormField(
+                          value: _selectedRoomTypes.contains('Single'),
+                          errorColor: AppColors.primaryColor,
+                          title: const Text('1. Single person room'),
+                          onChanged: (bool? value) {
+                            setState(() {
+                              if (value != null && value) {
+                                _selectedRoomTypes.add('Single');
+                              } else {
+                                _selectedRoomTypes.remove('Single');
+                              }
+                            });
+                          },
+                          validator: (bool? value) {
+                            if (_selectedRoomTypes.isEmpty) {
+                              return 'Please Select!';
+                            } else if (value!) {
+                              return null;
+                            }
+                          },
+                        ),
+                        CheckboxFormField(
+                          value: _selectedRoomTypes.contains('Double'),
+                          errorColor: AppColors.primaryColor,
+                          title: const Text('2. Two persons sharing room'),
+                          onChanged: (bool? value) {
+                            setState(() {
+                              if (value != null && value) {
+                                _selectedRoomTypes.add('Double');
+                              } else {
+                                _selectedRoomTypes.remove('Double');
+                              }
+                            });
+                          },
+                          validator: (bool? value) {
+                            if (_selectedRoomTypes.isEmpty) {
+                              return 'Please Select!';
+                            } else if (value!) {
+                              return null;
+                            }
+                          },
+                        ),
+                        CheckboxFormField(
+                          value: _selectedRoomTypes.contains('Triple'),
+                          errorColor: AppColors.primaryColor,
+                          title: const Text('3. Three persons sharing room'),
+                          onChanged: (bool? value) {
+                            setState(() {
+                              if (value != null && value) {
+                                _selectedRoomTypes.add('Triple');
+                              } else {
+                                _selectedRoomTypes.remove('Triple');
+                              }
+                            });
+                          },
+                          validator: (bool? value) {
+                            if (_selectedRoomTypes.isEmpty) {
+                              return 'Please Select!';
+                            } else if (value!) {
+                              return null;
+                            }
+                          },
+                        ),
+                        CheckboxFormField(
+                          value: _selectedRoomTypes.contains('Quad'),
+                          errorColor: AppColors.primaryColor,
+                          title: const Text('4. Four persons sharing room'),
+                          onChanged: (bool? value) {
+                            setState(() {
+                              if (value != null && value) {
+                                _selectedRoomTypes.add('Quad');
+                              } else {
+                                _selectedRoomTypes.remove('Quad');
+                              }
+                            });
+                          },
+                          validator: (bool? value) {
+                            if (_selectedRoomTypes.isEmpty) {
+                              return 'Please Select!';
+                            } else if (value!) {
+                              return null;
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    // DropdownButtonFormField<String>(
+                    //   decoration:
+                    //       const InputDecoration(labelText: 'Select Room Type'),
+                    //   value: _selectedRoomsOption,
+                    //   onChanged: (value) =>
+                    //       setState(() => _selectedRoomsOption = value),
+                    //   validator: (value) =>
+                    //       value == null ? 'Please select at least one Room Option' : null,
+                    //   items: ['Single', 'Double', 'Triple', 'Quad']
+                    //       .map<DropdownMenuItem<String>>((String value) {
+                    //     return DropdownMenuItem<String>(
+                    //       value: value,
+                    //       child: Text(value),
+                    //     );
+                    //   }).toList(),
+                    // ),
+                    const SizedBox(height: 15),
                     Center(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.PRIMARY_COLOR),
+                            backgroundColor: AppColors.primaryColor),
                         onPressed: _getCurrentLocation,
                         child: const Text(
                           'Save Current Location',
@@ -856,7 +956,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                     Center(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.PRIMARY_COLOR),
+                            backgroundColor: AppColors.primaryColor),
                         onPressed: () {
                           showFlexibleBottomSheet(
                             isDismissible: false,
@@ -883,7 +983,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       child: !_isEdit
                           ? ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.PRIMARY_COLOR),
+                                  backgroundColor: AppColors.primaryColor),
                               onPressed: () {
                                 if (_latitude == null || _longitude == null) {
                                   Fluttertoast.showToast(
@@ -892,7 +992,16 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                                     gravity: ToastGravity.BOTTOM,
                                     timeInSecForIosWeb: 1,
                                   );
-                                } else {
+                                }
+                                // else if (_selectedRoomTypes.isEmpty){
+                                //   Fluttertoast.showToast(
+                                //     msg: "Please select at least one room type!",
+                                //     toastLength: Toast.LENGTH_LONG,
+                                //     gravity: ToastGravity.BOTTOM,
+                                //     timeInSecForIosWeb: 1,
+                                //   );
+                                // }
+                                else {
                                   _postAd();
                                 }
                               },
@@ -905,7 +1014,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                             )
                           : ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.PRIMARY_COLOR),
+                                  backgroundColor: AppColors.primaryColor),
                               onPressed: _updateAd,
                               child: const Text(
                                 'Update Ad',
@@ -929,7 +1038,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         const CupertinoActivityIndicator(
-                            radius: 25, color: AppColors.PRIMARY_COLOR),
+                            radius: 25, color: AppColors.primaryColor),
                         const SizedBox(height: 10),
                         Text(loading,
                             style: const TextStyle(

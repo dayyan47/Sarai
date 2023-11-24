@@ -1,5 +1,4 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hostel_add/resources/values/colors.dart';
@@ -7,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../Screens/Home_Screen.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
-  const EmailVerificationScreen({Key? key});
+  const EmailVerificationScreen({super.key});
 
   @override
   _EmailVerificationScreenState createState() =>
@@ -78,7 +77,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.PRIMARY_COLOR,
+        backgroundColor: AppColors.primaryColor,
         title: const Text('Email Verification',
             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -94,7 +93,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             if (user != null && !user!.emailVerified)
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.PRIMARY_COLOR,
+                  backgroundColor: AppColors.primaryColor,
                 ),
                 onPressed: _sendVerificationEmail,
                 child: const Text(
@@ -111,7 +110,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             const SizedBox(height: 10),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.PRIMARY_COLOR,
+                backgroundColor: AppColors.primaryColor,
               ),
               onPressed: _checkEmailVerified,
               child: const Text(

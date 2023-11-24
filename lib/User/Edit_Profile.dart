@@ -273,7 +273,7 @@ class _EditProfileState extends State<EditProfile> {
         children: [
           Scaffold(
             appBar: AppBar(
-              backgroundColor: AppColors.PRIMARY_COLOR,
+              backgroundColor: AppColors.primaryColor,
               title: const Text(
                 'Edit Profile',
                 style:
@@ -308,7 +308,7 @@ class _EditProfileState extends State<EditProfile> {
                                 ? Image.file(newProfileImage!)
                                 : profileImageUrl == ""
                                     ? const Icon(Icons.person_sharp,
-                                        size: 100, color: AppColors.PRIMARY_COLOR)
+                                        size: 100, color: AppColors.primaryColor)
                                     : CachedNetworkImage(
                                         placeholder: (context, url) =>
                                             const Center(
@@ -330,7 +330,7 @@ class _EditProfileState extends State<EditProfile> {
                               height: 35,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(100),
-                                color: AppColors.PRIMARY_COLOR,
+                                color: AppColors.primaryColor,
                               ),
                               child: const Icon(LineAwesomeIcons.camera_retro),
                             ),
@@ -480,7 +480,7 @@ class _EditProfileState extends State<EditProfile> {
                             child: ElevatedButton(
                               onPressed: _updateUserData,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.PRIMARY_COLOR,
+                                backgroundColor: AppColors.primaryColor,
                                 side: BorderSide.none,
                                 shape: const StadiumBorder(),
                               ),
@@ -528,7 +528,7 @@ class _EditProfileState extends State<EditProfile> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         CupertinoActivityIndicator(
-                            radius: 25, color: AppColors.PRIMARY_COLOR),
+                            radius: 25, color: AppColors.primaryColor),
                         SizedBox(height: 10),
                         Text("Updating...",
                             style: TextStyle(

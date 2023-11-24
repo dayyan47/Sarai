@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:hostel_add/resources/values/colors.dart';
 import '../Widgets/Ad_Home_Screen_Widget.dart';
@@ -36,7 +35,7 @@ class _FavAdsScreenState extends State<FavAdsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          backgroundColor: AppColors.PRIMARY_COLOR,
+          backgroundColor: AppColors.primaryColor,
           title: const Text('Favorite Ads',
               style:
                   TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -67,7 +66,7 @@ class _FavAdsScreenState extends State<FavAdsScreen> {
                         final List ads = snapshot.data!.get("fav_ads");
                         _removeDeletedAdsFromFavAds(ads); // to unFav ads that were deleted by users
 
-                        if (!ads.isEmpty) {
+                        if (ads.isNotEmpty) {
                           return StreamBuilder<QuerySnapshot>(
                               stream: _firestore
                                   .collection('ads')

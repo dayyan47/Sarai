@@ -23,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     return const Center(
         child: CupertinoActivityIndicator(
-            radius: 25, color: AppColors.PRIMARY_COLOR));
+            radius: 25, color: AppColors.primaryColor));
   }
 
   Future<void> _checkLogin() async {

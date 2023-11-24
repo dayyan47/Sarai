@@ -43,7 +43,7 @@ class _OtherLocationScreenState extends State<OtherLocationScreen> {
         toolbarHeight: 30,
         automaticallyImplyLeading: false,
         centerTitle: true,
-        backgroundColor: AppColors.PRIMARY_COLOR,
+        backgroundColor: AppColors.primaryColor,
         title: const Text('Long press on map to save location',
             style: TextStyle(color: Colors.white, fontSize: 18)),
       ),
@@ -67,7 +67,7 @@ class _OtherLocationScreenState extends State<OtherLocationScreen> {
               child: Center(
                 child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.PRIMARY_COLOR),
+                        backgroundColor: AppColors.primaryColor),
                     child: const Text("Save this Location",
                         style: TextStyle(color: Colors.white)),
                     onPressed: () {

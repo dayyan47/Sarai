@@ -172,7 +172,7 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           Scaffold(
               appBar: AppBar(
-                backgroundColor: AppColors.PRIMARY_COLOR,
+                backgroundColor: AppColors.primaryColor,
                 title: const Center(
                     child: Text(
                   'SARAI',
@@ -264,7 +264,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     child: const Text(
                                       'Forgot Password?',
                                       style: TextStyle(
-                                          color: AppColors.PRIMARY_COLOR),
+                                          color: AppColors.primaryColor),
                                     ),
                                     onPressed: () => Navigator.push(
                                         context,
@@ -277,7 +277,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ElevatedButton(
                                     style: ElevatedButton.styleFrom(
                                         backgroundColor:
-                                            AppColors.PRIMARY_COLOR),
+                                            AppColors.primaryColor),
                                     onPressed: _signInWithEmailAndPassword,
                                     child: const Text('Login',
                                         style: TextStyle(
@@ -294,7 +294,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   child: const Text(
                                     "Don't have an account? Sign up here",
                                     style: TextStyle(
-                                        color: AppColors.PRIMARY_COLOR),
+                                        color: AppColors.primaryColor),
                                   ),
                                 ),
                                 TextButton(
@@ -302,7 +302,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   child: const Text(
                                     "Having problem logging in, contact Support",
                                     style: TextStyle(
-                                        color: AppColors.PRIMARY_COLOR),
+                                        color: AppColors.primaryColor),
                                   ),
                                 ),
                               ],
@@ -323,7 +323,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         CupertinoActivityIndicator(
-                            radius: 25, color: AppColors.PRIMARY_COLOR),
+                            radius: 25, color: AppColors.primaryColor),
                         SizedBox(height: 10),
                         Text("Loading...",
                             style: TextStyle(

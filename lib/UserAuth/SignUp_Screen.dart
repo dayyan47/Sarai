@@ -236,7 +236,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         children: [
           Scaffold(
             appBar: AppBar(
-                backgroundColor: AppColors.PRIMARY_COLOR,
+                backgroundColor: AppColors.primaryColor,
                 title: const Text('Sign Up',
                     style: TextStyle(
                         color: Colors.white, fontWeight: FontWeight.bold)),
@@ -256,7 +256,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         backgroundColor: Colors.transparent,
                         child: _profileImage == null
                             ? const Icon(Icons.add_a_photo,
-                                size: 50, color: AppColors.PRIMARY_COLOR)
+                                size: 50, color: AppColors.primaryColor)
                             : Image.file(_profileImage!,
                                 width: 200, height: 200, fit: BoxFit.contain),
                       ),
@@ -358,7 +358,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     const SizedBox(height: 10),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.PRIMARY_COLOR),
+                          backgroundColor: AppColors.primaryColor),
                       onPressed: _signUpWithEmailAndPassword,
                       child: const Text(
                         'Sign Up',
@@ -371,7 +371,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       onPressed: () => Navigator.pop(context),
                       child: const Text(
                         'Already have an account? Login here',
-                        style: TextStyle(color: AppColors.PRIMARY_COLOR),
+                        style: TextStyle(color: AppColors.primaryColor),
                       ),
                     ),
                   ],
@@ -388,7 +388,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         CupertinoActivityIndicator(
-                            radius: 25, color: AppColors.PRIMARY_COLOR),
+                            radius: 25, color: AppColors.primaryColor),
                         SizedBox(height: 10),
                         Text('Signing Up...',
                             style: TextStyle(
