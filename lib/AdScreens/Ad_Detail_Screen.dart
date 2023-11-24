@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,6 +8,7 @@ import 'package:hostel_add/AdScreens/Post_Edit_Ads_Screen.dart';
 import 'package:intl/intl.dart';
 import 'package:modern_form_line_awesome_icons/modern_form_line_awesome_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:hostel_add/resources/values/colors.dart';
 
 class AdDetailScreen extends StatefulWidget {
   final String adId;
@@ -142,7 +144,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     }
   }
 
-  _makePhoneCall(String phoneNumber) async {
+  void _makePhoneCall(String phoneNumber) async {
     Uri url = Uri(scheme: "tel", path: phoneNumber);
     if (!await canLaunchUrl(url)) {
       await launchUrl(url);
@@ -151,7 +153,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     }
   }
 
-  _showAlertDialog(BuildContext context, String phoneNumber) {
+  void _showAlertDialog(BuildContext context, String phoneNumber) {
     Widget noButton = TextButton(
       child: const Text("No"),
       onPressed: () {
@@ -188,7 +190,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-            backgroundColor: const Color(0xFFFF5A5F),
+            backgroundColor: AppColors.PRIMARY_COLOR,
             title: const Text('Ad Details',
                 style: TextStyle(
                     color: Colors.white, fontWeight: FontWeight.bold)),
@@ -236,7 +238,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               double lat = double.parse(adData['latitude']);
               double long = double.parse(adData['longitude']);
               final Timestamp timestamp = adData['timestamp'];
-              final imageUrls = adData['image_urls'] != null ? adData['image_urls'] : [];
+              final imageUrls =
+                  adData['image_urls'] != null ? adData['image_urls'] : [];
               final phoneNum = adData['phone_number'] as String?;
               final fLM1 = adData['FLM1'] as String;
               final fLM2 = adData['FLM2'] as String;
@@ -245,32 +248,27 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               final postDate =
                   DateTime.fromMillisecondsSinceEpoch(timestamp.seconds * 1000);
 
-              Widget
-                  imageWidget; // Widget to display the image or "No Image" icon if no image URL.
+              Widget imageWidget;
 
               if (imageUrls.isNotEmpty) {
-                imageWidget = ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: SizedBox(
-                    height: 250,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: imageUrls.length,
-                      shrinkWrap: true,
-                      itemBuilder: (context, index) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: Image.network(imageUrls[index]),
-                          // child: Image(
-                          //     image: ResizeImage(NetworkImage(imageUrls[index]),
-                          //         height: 250,
-                          //         width: MediaQuery.of(context)
-                          //             .size
-                          //             .width
-                          //             .toInt())),
-                        );
-                      },
-                    ),
+                imageWidget = SizedBox(
+                  height: 250,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: imageUrls.length,
+                    shrinkWrap: true,
+                    itemBuilder: (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: CachedNetworkImage(
+                          placeholder: (context, url) =>
+                              Center(child: const CircularProgressIndicator()),
+                          imageUrl: imageUrls[index],
+                          errorWidget: (context, url, error) =>
+                              Icon(Icons.error),
+                        ),
+                      );
+                    },
                   ),
                 );
               } else {

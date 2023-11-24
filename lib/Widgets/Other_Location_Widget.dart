@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:hostel_add/resources/values/colors.dart';
 
 class OtherLocationScreen extends StatefulWidget {
   final Function(LatLng) onSaveLocation; // Callback Function
@@ -16,8 +17,7 @@ class _OtherLocationScreenState extends State<OtherLocationScreen> {
   Set<Marker> markers = <Marker>{};
   GoogleMapController? mapController;
   final Completer<GoogleMapController> _controller = Completer();
-  static const CameraPosition _kGoogle =
-      CameraPosition(target: LatLng(31.582045, 74.329376), zoom: 15);
+  static const CameraPosition _kGoogle = CameraPosition(target: LatLng(31.582045, 74.329376), zoom: 15);
   bool check = false;
   LatLng? location;
 
@@ -43,7 +43,7 @@ class _OtherLocationScreenState extends State<OtherLocationScreen> {
         toolbarHeight: 30,
         automaticallyImplyLeading: false,
         centerTitle: true,
-        backgroundColor: const Color(0xFFFF5A5F),
+        backgroundColor: AppColors.PRIMARY_COLOR,
         title: const Text('Long press on map to save location',
             style: TextStyle(color: Colors.white, fontSize: 18)),
       ),
@@ -67,7 +67,7 @@ class _OtherLocationScreenState extends State<OtherLocationScreen> {
               child: Center(
                 child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF5A5F)),
+                        backgroundColor: AppColors.PRIMARY_COLOR),
                     child: const Text("Save this Location",
                         style: TextStyle(color: Colors.white)),
                     onPressed: () {

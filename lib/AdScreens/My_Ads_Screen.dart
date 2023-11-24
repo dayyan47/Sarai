@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hostel_add/Widgets/Ad_Home_Screen_Widget.dart';
 import 'package:hostel_add/AdScreens/Post_Edit_Ads_Screen.dart';
+import 'package:hostel_add/resources/values/colors.dart';
 
 class MyAdsScreen extends StatefulWidget {
   const MyAdsScreen({super.key});
@@ -15,14 +16,11 @@ class _MyAdsScreenState extends State<MyAdsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final User? currentUser = FirebaseAuth.instance.currentUser;
 
-  String? fullName;
-  String? profileImageUrl;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFF5A5F),
+        backgroundColor: AppColors.PRIMARY_COLOR,
         title: const Text('My Ads',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -36,7 +34,6 @@ class _MyAdsScreenState extends State<MyAdsScreen> {
               stream: _firestore
                   .collection('ads')
                   .where('userId', isEqualTo: currentUser?.uid)
-                  //.orderBy("timestamp", descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
                 List myAds = [];
@@ -51,10 +48,10 @@ class _MyAdsScreenState extends State<MyAdsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           const Text("You haven't posted any ad yet!"),
-                          const SizedBox(height: 15),
+                          const SizedBox(height: 10),
                           ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFFF5A5F)),
+                                  backgroundColor: AppColors.PRIMARY_COLOR),
                               onPressed: () {
                                 Navigator.push(
                                   context,
@@ -64,7 +61,7 @@ class _MyAdsScreenState extends State<MyAdsScreen> {
                                               adId: "Post Ad")),
                                 );
                               },
-                              child: const Text('Start Posting your first AD',
+                              child: const Text('Start posting your first ad',
                                   style: TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold)))

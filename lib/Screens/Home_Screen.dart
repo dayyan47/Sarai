@@ -6,6 +6,7 @@ import 'package:hostel_add/AdScreens/Fav_Ads_Screen.dart';
 import 'package:hostel_add/AdScreens/Post_Edit_Ads_Screen.dart';
 import 'package:hostel_add/Screens/Profile_Screen.dart';
 import 'package:hostel_add/Screens/Maps_Screen.dart';
+import 'package:hostel_add/resources/values/colors.dart';
 import 'package:modern_form_line_awesome_icons/modern_form_line_awesome_icons.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -24,7 +25,6 @@ class _HomeScreenState extends State<HomeScreen> {
     const MapViewScreen(),
     const ProfileScreen()
   ];
-
   static const List<Widget> _pages = <Widget>[
     Text('Home',
         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -70,24 +70,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-          actions: _selectedIndex == 0
-              ? [
-                  IconButton(
-                    icon:
-                        const Icon(LineAwesomeIcons.heart, color: Colors.white),
-                    onPressed: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const FavAdsScreen()));
-                    },
-                  ),
-                  const SizedBox(width: 10)
-                ]
-              : null,
-          backgroundColor: const Color(0xFFFF5A5F),
-          title: _pages[_selectedIndex],
-          centerTitle: true),
+        actions: _selectedIndex == 0
+            ? [
+                IconButton(
+                  icon: const Icon(LineAwesomeIcons.heart, color: Colors.white),
+                  onPressed: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const FavAdsScreen()));
+                  },
+                ),
+                const SizedBox(width: 10)
+              ]
+            : null,
+        backgroundColor: AppColors.PRIMARY_COLOR,
+        title: _pages[_selectedIndex],
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+      ),
       body: NotificationListener<UserScrollNotification>(
           onNotification: (notification) {
             final ScrollDirection direction = notification.direction;
@@ -108,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.black,
-        backgroundColor: const Color(0xFFFF5A5F),
+        backgroundColor: AppColors.PRIMARY_COLOR,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
           BottomNavigationBarItem(icon: Icon(Icons.map), label: "Map"),
@@ -131,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const PostEditAdScreen(adId: "Post Ad")),
                       );
                     },
-                    backgroundColor: const Color(0xFFFF5A5F),
+                    backgroundColor: AppColors.PRIMARY_COLOR,
                     label: const Row(children: [
                       Text(
                         "Post AD",

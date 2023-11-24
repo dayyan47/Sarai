@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:hostel_add/resources/values/colors.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
@@ -45,7 +46,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          backgroundColor: const Color(0xFFFF5A5F),
+          backgroundColor: AppColors.PRIMARY_COLOR,
           title: const Text('Reset Password',
               style:
                   TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -74,7 +75,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               const SizedBox(height: 20),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF5A5F)),
+                    backgroundColor: AppColors.PRIMARY_COLOR),
                 onPressed: _resetPassword,
                 child: const Text('Reset Password',
                     style: TextStyle(

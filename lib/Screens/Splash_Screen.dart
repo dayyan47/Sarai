@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:hostel_add/Screens/Home_Screen.dart';
 import 'package:hostel_add/UserAuth/Login_Screen.dart';
+import 'package:hostel_add/resources/values/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -21,8 +22,8 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return const Center(
-        child:
-            CupertinoActivityIndicator(radius: 25, color: Color(0xFFFF5A5F)));
+        child: CupertinoActivityIndicator(
+            radius: 25, color: AppColors.PRIMARY_COLOR));
   }
 
   Future<void> _checkLogin() async {

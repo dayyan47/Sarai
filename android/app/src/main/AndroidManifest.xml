@@ -4,7 +4,7 @@
         android:name="android.hardware.camera"
         android:required="false" />
     <application
-        android:label="hostel_add"
+        android:label="Sarai"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <meta-data android:name="com.google.android.geo.API_KEY"

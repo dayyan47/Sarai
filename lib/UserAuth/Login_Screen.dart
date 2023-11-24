@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -6,7 +7,10 @@ import 'package:hostel_add/UserAuth/Email_Verification.dart';
 import 'package:hostel_add/UserAuth/Forget_Password.dart';
 import 'package:hostel_add/UserAuth/SignUp_Screen.dart';
 import 'package:hostel_add/Screens/Home_Screen.dart';
+import 'package:modern_form_line_awesome_icons/modern_form_line_awesome_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:hostel_add/resources/values/colors.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,10 +23,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
+  bool _isPasswordVisible = true;
   bool _isLoggedIn = false;
   bool _isLoading = false;
   String _email = '';
   String _password = '';
+  Icon passwordVisible = const Icon(LineAwesomeIcons.eye_slash);
 
   @override
   void initState() {
@@ -58,9 +64,27 @@ class _LoginScreenState extends State<LoginScreen> {
         User? user = FirebaseAuth.instance.currentUser;
         if (user != null) {
           await user.reload(); // Refresh the user's data
-
+          final userDoc =
+              FirebaseFirestore.instance.collection('users').doc(user.uid);
+          DocumentSnapshot documentSnapshot =
+              await userDoc.get(); // check if user data exists in users bucket
+          if (!documentSnapshot.exists) {
+            setState(() {
+              _isLoading = false;
+            });
+            print('User data does not exist');
+            _deleteUser(user);
+            Fluttertoast.showToast(
+                msg: "Please Sign Up again or contact support!",
+                toastLength: Toast.LENGTH_LONG,
+                gravity: ToastGravity.BOTTOM,
+                timeInSecForIosWeb: 2,
+                textColor: Colors.white,
+                fontSize: 10.0);
+            return; // Stop login process if user data doesn't exist
+          }
+          // Check if the user's email is verified or not
           if (user.emailVerified) {
-            // The user's email is verified
             setState(() {
               _isLoggedIn = true;
             });
@@ -94,14 +118,13 @@ class _LoginScreenState extends State<LoginScreen> {
           // User is not signed in
           print('User is not signed in');
         }
-
       } catch (e) {
-        print('Invalid User Name/Password');
+        print('Invalid Email/Password');
         setState(() {
           _isLoggedIn = false;
           _isLoading = false;
           Fluttertoast.showToast(
-              msg: e.toString(),
+              msg: 'Invalid Email/Password',
               toastLength: Toast.LENGTH_LONG,
               gravity: ToastGravity.BOTTOM,
               timeInSecForIosWeb: 2,
@@ -114,6 +137,33 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _deleteUser(User? currentUser) async {
+    try {
+      if (currentUser != null) {
+        await currentUser.delete();
+        print("User deleted successfully!");
+
+        //To Do: delete all ads of this user too?
+      } else {
+        print("No user is currently signed in.");
+      }
+    } catch (e) {
+      print("Error deleting user: $e");
+    }
+  }
+
+  void _launchWhatsapp() async {
+    String phoneNumber = '+923032777297';
+    String message = 'Hi guys, I need your help!';
+    String whatsappUrl =
+        'https://wa.me/$phoneNumber/?text=${Uri.parse(message)}';
+    if (!await canLaunchUrl(Uri.parse(whatsappUrl))) {
+      await launchUrl(Uri.parse(whatsappUrl));
+    } else {
+      print("Can't open WhatsApp.");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -122,10 +172,10 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           Scaffold(
               appBar: AppBar(
-                backgroundColor: const Color(0xFFFF5A5F),
+                backgroundColor: AppColors.PRIMARY_COLOR,
                 title: const Center(
                     child: Text(
-                  'HOSTEL',
+                  'SARAI',
                   style: TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold),
                 )),
@@ -135,80 +185,128 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Container(
                   width: MediaQuery.of(context).size.width,
                   height: MediaQuery.of(context).size.height,
-                  color: Colors.white,
-                  padding: const EdgeInsets.all(20.0),
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.fromLTRB(15.0, 50.0, 15.0, 15.0),
                   child: Form(
                     key: _formKey,
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        Image.asset('assets/HostelLogo.jpg',
-                            height: 65,
-                            width: double.infinity,
-                            fit: BoxFit.cover),
-                        const SizedBox(height: 40),
-                        TextFormField(
-                          decoration: const InputDecoration(
-                            labelText: 'Email',
-                          ),
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) {
-                            if (value!.isEmpty) {
-                              return 'Please Enter Email';
-                            }
-                            return null;
-                          },
-                          onSaved: (value) => _email = value!,
-                        ),
-                        TextFormField(
-                          decoration:
-                              const InputDecoration(labelText: 'Password'),
-                          obscureText: true,
-                          validator: (value) {
-                            if (value!.isEmpty) {
-                              return 'Please Enter Password!!';
-                            }
-                            return null;
-                          },
-                          onSaved: (value) => _password = value!,
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          width: MediaQuery.of(context).size.width,
-                          height: 35,
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            child: const Text(
-                              'Forgot Password?',
-                              style: TextStyle(
-                                  color: Color(0xFFFF5A5F),
-                                  fontWeight: FontWeight.bold),
+                        Card(
+                          elevation: 10,
+                          color: Colors.white,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                                15.0, 30.0, 15.0, 30.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Image.asset('assets/SarayeLogo.png',
+                                        height: 150, fit: BoxFit.contain)
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                TextFormField(
+                                  decoration: const InputDecoration(
+                                    labelText: 'Email',
+                                  ),
+                                  keyboardType: TextInputType.emailAddress,
+                                  validator: (value) {
+                                    if (value!.isEmpty) {
+                                      return 'Please Enter Email';
+                                    }
+                                    return null;
+                                  },
+                                  onSaved: (value) => _email = value!,
+                                ),
+                                const SizedBox(height: 10),
+                                TextFormField(
+                                  decoration: InputDecoration(
+                                      label: const Text('Password'),
+                                      suffixIcon: IconButton(
+                                        icon: passwordVisible,
+                                        onPressed: () {
+                                          setState(() {
+                                            if (_isPasswordVisible == true) {
+                                              _isPasswordVisible = false;
+                                              passwordVisible = const Icon(
+                                                  LineAwesomeIcons.eye);
+                                            } else if (_isPasswordVisible ==
+                                                false) {
+                                              _isPasswordVisible = true;
+                                              passwordVisible = const Icon(
+                                                  LineAwesomeIcons.eye_slash);
+                                            }
+                                          });
+                                        },
+                                      )),
+                                  obscureText: _isPasswordVisible,
+                                  validator: (value) {
+                                    if (value!.isEmpty) {
+                                      return 'Please Enter Password!!';
+                                    }
+                                    return null;
+                                  },
+                                  onSaved: (value) => _password = value!,
+                                ),
+                                const SizedBox(height: 10),
+                                Container(
+                                  width: MediaQuery.of(context).size.width,
+                                  height: 35,
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    child: const Text(
+                                      'Forgot Password?',
+                                      style: TextStyle(
+                                          color: AppColors.PRIMARY_COLOR),
+                                    ),
+                                    onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (context) =>
+                                                const ResetPasswordScreen())),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            AppColors.PRIMARY_COLOR),
+                                    onPressed: _signInWithEmailAndPassword,
+                                    child: const Text('Login',
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18))),
+                                const SizedBox(height: 5),
+                                TextButton(
+                                  onPressed: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              const SignUpScreen())),
+                                  child: const Text(
+                                    "Don't have an account? Sign up here",
+                                    style: TextStyle(
+                                        color: AppColors.PRIMARY_COLOR),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: _launchWhatsapp,
+                                  child: const Text(
+                                    "Having problem logging in, contact Support",
+                                    style: TextStyle(
+                                        color: AppColors.PRIMARY_COLOR),
+                                  ),
+                                ),
+                              ],
                             ),
-                            onPressed: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const ResetPasswordScreen())),
-                          ),
-                        ),
-                        ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFFF5A5F)),
-                            onPressed: _signInWithEmailAndPassword,
-                            child: const Text('Login',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18))),
-                        TextButton(
-                          onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const SignUpScreen())),
-                          child: const Text(
-                            'Dont Have an account? SignUp',
-                            style: TextStyle(color: Color(0xFFFF5A5F)),
                           ),
                         ),
                       ],
@@ -225,7 +323,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         CupertinoActivityIndicator(
-                            radius: 25, color: Color(0xFFFF5A5F)),
+                            radius: 25, color: AppColors.PRIMARY_COLOR),
                         SizedBox(height: 10),
                         Text("Loading...",
                             style: TextStyle(

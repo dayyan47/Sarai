@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:hostel_add/UserAuth/Email_Verification.dart';
+import 'package:hostel_add/resources/values/colors.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -25,7 +25,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   bool _isLoading = false;
   bool _isPasswordVisible = true;
-
   String _email = '';
   String _password = '';
   String _fullName = '';
@@ -33,11 +32,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
   String _dateOfBirth = '';
   File? _profileImage;
   RegExp pakistanPhoneRegExp = RegExp(r'^03[0-9]{2}[0-9]{7}$');
-  final TextEditingController _dobController = TextEditingController();
   Icon passwordVisible = const Icon(LineAwesomeIcons.eye_slash);
   DateTime _selectedDate = DateTime.now();
+  final TextEditingController _dobController = TextEditingController();
 
   Future<void> _getImageFromGallery() async {
+    await [Permission.storage, Permission.photos].request();
     bool isStoragePermissionGranted = await Permission.storage.isGranted;
     //bool isGalleryPermissionGranted = await Permission.photos.isGranted; // for ios
 
@@ -62,6 +62,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _getImageFromCamera() async {
+    await [Permission.camera].request();
     bool isCameraPermissionGranted = await Permission.camera.isGranted;
     if (isCameraPermissionGranted) {
       final pickedFile =
@@ -84,9 +85,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-  Future showOptions() async {
-    await [Permission.camera, Permission.storage, Permission.photos].request();
-
+  void showOptions()  {
     showCupertinoModalPopup(
       context: context,
       builder: (context) => CupertinoActionSheet(
@@ -163,8 +162,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
         final UserCredential userCredential = await _auth
             .createUserWithEmailAndPassword(email: _email, password: _password);
-
-        // Upload the profile image to FirebaseStorage
         if (_profileImage != null) {
           final imageReference = FirebaseStorage.instance
               .ref()
@@ -172,7 +169,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
           await imageReference.putFile(_profileImage!);
           final imageUrl = await imageReference.getDownloadURL();
 
-          // Store other user information in Firestore
           await _firestore
               .collection('users')
               .doc(userCredential.user?.uid)
@@ -211,12 +207,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         print('Date of Birth: $_dateOfBirth');
 
         _sendVerificationEmail();
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const EmailVerificationScreen()),
-        );
       } catch (e) {
-        // Handle errors (e.g., weak password, email already exists, etc.)
         setState(() {
           _isLoading = false;
         });
@@ -228,6 +219,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
             textColor: Colors.white,
             fontSize: 10.0);
         print('Error: $e');
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+        Navigator.pop(context);
       }
     }
   }
@@ -240,7 +236,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         children: [
           Scaffold(
             appBar: AppBar(
-                backgroundColor: const Color(0xFFFF5A5F),
+                backgroundColor: AppColors.PRIMARY_COLOR,
                 title: const Text('Sign Up',
                     style: TextStyle(
                         color: Colors.white, fontWeight: FontWeight.bold)),
@@ -260,7 +256,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         backgroundColor: Colors.transparent,
                         child: _profileImage == null
                             ? const Icon(Icons.add_a_photo,
-                                size: 50, color: Color(0xFFFF5A5F))
+                                size: 50, color: AppColors.PRIMARY_COLOR)
                             : Image.file(_profileImage!,
                                 width: 200, height: 200, fit: BoxFit.contain),
                       ),
@@ -362,7 +358,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     const SizedBox(height: 10),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF5A5F)),
+                          backgroundColor: AppColors.PRIMARY_COLOR),
                       onPressed: _signUpWithEmailAndPassword,
                       child: const Text(
                         'Sign Up',
@@ -374,8 +370,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     TextButton(
                       onPressed: () => Navigator.pop(context),
                       child: const Text(
-                        'Already have an account? Login',
-                        style: TextStyle(color: Color(0xFFFF5A5F)),
+                        'Already have an account? Login here',
+                        style: TextStyle(color: AppColors.PRIMARY_COLOR),
                       ),
                     ),
                   ],
@@ -392,7 +388,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         CupertinoActivityIndicator(
-                            radius: 25, color: Color(0xFFFF5A5F)),
+                            radius: 25, color: AppColors.PRIMARY_COLOR),
                         SizedBox(height: 10),
                         Text('Signing Up...',
                             style: TextStyle(

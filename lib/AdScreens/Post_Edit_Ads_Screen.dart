@@ -1,4 +1,5 @@
 import 'package:bottom_sheet/bottom_sheet.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,6 +8,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hostel_add/Widgets/Other_Location_Widget.dart';
+import 'package:hostel_add/resources/values/colors.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -90,15 +92,11 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
         _selectedParkingOption = adData['Parking'];
         _latitude = adData['latitude'];
         _longitude = adData['longitude'];
-        if(adData['image_urls'] != null) {
+        if (adData['image_urls'] != null) {
           _imageUrls = adData['image_urls'];
         }
       });
-      //download images
-      // for (var image in _imageUrls) {
-      //   XFile imageFile = await _downloadImages(image);
-      //   _images.add(imageFile);
-      // }
+
     } catch (e) {
       print('Error fetching ad data: $e');
       Fluttertoast.showToast(
@@ -111,19 +109,6 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
     }
   }
 
-  // Future<XFile> _downloadImages(String url) async {
-  //   final response = await http.get(Uri.parse(url));
-  //   if (response.statusCode == 200) {
-  //     Directory tempDir = await getTemporaryDirectory();
-  //     String fileName = url.split('/').last;
-  //     File file = File('${tempDir.path}/$fileName');
-  //     await file.writeAsBytes(response.bodyBytes);
-  //     return XFile(file.path);
-  //   } else {
-  //     throw Exception('Failed to download file');
-  //   }
-  // }
-
   Future<void> _uploadImages(List<XFile> images) async {
     try {
       for (var image in images) {
@@ -133,12 +118,6 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
         await imageReference.putFile(File(image.path));
         final imageUrl = await imageReference.getDownloadURL();
         _imageUrls.add(imageUrl);
-        //_imageNames.add(imageName);
-        // Reference storageReference =
-        //     FirebaseStorage.instance.ref().child('ad_images').child(imageName);
-        // UploadTask uploadTask = storageReference.putFile(File(image.path));
-        // TaskSnapshot storageSnapshot = await uploadTask;
-        // String downloadUrl = await storageSnapshot.ref.getDownloadURL();
       }
       print('Uploaded image URLs: $_imageUrls');
     } catch (e) {
@@ -279,30 +258,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
             await _uploadImages(_images);
             adData['image_urls'] = _imageUrls;
             print('Images uploaded Successfully.');
-
-            // if (_imageUrls.isEmpty && _imageNames.isEmpty) {
-            //   //adData['image_names'] = [];
-            //   adData['image_urls'] = [];
-            //   print('Images upload failed.');
-            // } else {
-            //   //adData['image_names'] = _imageNames;
-            //   adData['image_urls'] = _imageUrls;
-            //   print('Images uploaded Successfully.');
-            // }
           }
-
-          // if (_image != null) {
-          //   final imageUrl = await uploadImage(_image!);
-          //   if (imageUrl != null) {
-          //     adData['image_name'] = imageUrl[0];
-          //     adData['image_url'] = imageUrl[1];
-          //   } else if (imageUrl.isEmpty) {
-          //     adData['image_name'] = "";
-          //     adData['image_url'] = "Image upload failed.";
-          //   } else {
-          //     print('Image upload failed.');
-          //   }
-          // }
 
           await _firestore.collection('ads').add(adData);
           Fluttertoast.showToast(
@@ -366,22 +322,11 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
           };
 
           if (_newImages.isNotEmpty) {
-            //delete old pictures of this ad left
             await _uploadImages(_newImages);
             adData['image_urls'] = _imageUrls;
             print('Images uploaded Successfully.');
-            // if (_imageUrls.isEmpty && _imageNames.isEmpty) {
-            //   adData['image_names'] = [];
-            //   adData['image_urls'] = [];
-            //   print('Images upload failed.');
-            // } else {
-            //   adData['image_names'] = _imageNames;
-            //   adData['image_urls'] = _imageUrls;
-            //   print('Images uploaded Successfully.');
-            // }
           }
 
-          // if (_image != null) {
           //   //delete old picture from storage first
           //   if (_imageName != null && _imageName != "") {
           //     await FirebaseStorage.instance
@@ -390,17 +335,6 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
           //         .child(_imageName!)
           //         .delete();
           //   }
-          //   final imageUrl = await uploadImage(_image!);
-          //   if (imageUrl.isNotEmpty) {
-          //     adData['image_name'] = imageUrl[0];
-          //     adData['image_url'] = imageUrl[1];
-          //   } else if (imageUrl.isEmpty) {
-          //     adData['image_name'] = "";
-          //     adData['image_url'] = "Image upload failed.";
-          //   } else {
-          //     print('Image upload failed.');
-          //   }
-          // }
 
           await _firestore.collection('ads').doc(widget.adId).update(adData);
           Fluttertoast.showToast(
@@ -443,13 +377,6 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
           await FirebaseStorage.instance.refFromURL(imageUrl).delete();
         }
       }
-      // if (_imageName != null && _imageName != "") {
-      //   await FirebaseStorage.instance
-      //       .ref()
-      //       .child('ad_images')
-      //       .child(_imageName!)
-      //       .delete();
-      // }
 
       Fluttertoast.showToast(
           msg: "Ad deleted successfully!",
@@ -483,14 +410,6 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
     bool isStoragePermissionGranted = await Permission.storage.isGranted;
     //bool isGalleryPermissionGranted = await Permission.photos.isGranted; // for ios
     if (isStoragePermissionGranted) {
-      // final pickedFile =
-      //     await ImagePicker().pickImage(source: ImageSource.gallery);
-      // if (pickedFile != null) {
-      //   setState(() {
-      //     _image = File(pickedFile.path);
-      //   });
-      // }
-
       List<XFile>? selectedImages = await ImagePicker().pickMultiImage();
 
       if (_isEdit) {
@@ -523,7 +442,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
     bool isCameraPermissionGranted = await Permission.camera.isGranted;
     if (isCameraPermissionGranted) {
       final pickedFile =
-          await ImagePicker().pickImage(source: ImageSource.camera);
+      await ImagePicker().pickImage(source: ImageSource.camera);
       if (_isEdit) {
         if (pickedFile != null) {
           setState(() {
@@ -547,13 +466,6 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
           fontSize: 10.0);
       openAppSettings();
     }
-
-// List<XFile>? selectedImages = await ImagePicker().pickMultipleMedia();
-// if (selectedImages != null) {
-//   setState(() {
-//     _images = selectedImages;
-//   });
-// }
   }
 
   void showOptions() {
@@ -580,21 +492,6 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
     );
   }
 
-// Future<List<String?>> uploadImage(File imageFile) async {
-//   try {
-//     String imageName = '${DateTime.now()}.jpg';
-//     final imageReference =
-//         FirebaseStorage.instance.ref().child('ad_images').child(imageName);
-//     await imageReference.putFile(imageFile);
-//     final imageUrl = await imageReference.getDownloadURL();
-//     List<String> data = [imageName, imageUrl];
-//     return data;
-//   } catch (e) {
-//     print('Error uploading image: $e');
-//     return [];
-//   }
-// }
-
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -603,7 +500,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
         children: [
           Scaffold(
             appBar: AppBar(
-                backgroundColor: const Color(0xFFFF5A5F),
+                backgroundColor: AppColors.PRIMARY_COLOR,
                 title: Text(
                   _isEdit ? 'Edit Your Ad' : 'Post Your Ad',
                   style: const TextStyle(
@@ -657,8 +554,9 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    if (_isEdit && _imageUrls.isNotEmpty) Text("Old Pictures"),
-                    if (_isEdit && _imageUrls.isNotEmpty) // for old images that are already uploaded for edit ad
+                    if (_isEdit &&
+                        _imageUrls
+                            .isNotEmpty) // for old images that are already uploaded for edit ad
                       SizedBox(
                         height: 200,
                         child: ListView.builder(
@@ -668,121 +566,62 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                           itemBuilder: (context, index) {
                             return Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: Image.network(_imageUrls[index]),
+                              child: CachedNetworkImage(
+                                placeholder: (context, url) => const Center(
+                                    child: CircularProgressIndicator()),
+                                imageUrl: _imageUrls[index],
+                                errorWidget: (context, url, error) =>
+                                    const Icon(Icons.error),
+                              ),
                             );
                           },
                         ),
                       ),
-                    if (_isEdit && _newImages.isNotEmpty) Text("New Pictures"),
-                    // for new images that are going to be uploaded for edit ad
-                    if ((_isEdit && _newImages.isNotEmpty) || (_images.isNotEmpty && !_isEdit))
+                    if ((_isEdit && _newImages.isNotEmpty) ||
+                        (_images.isNotEmpty && !_isEdit)) // for new images that are going to be uploaded for edit ad
                       SizedBox(
                         height: 200,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
-                          itemCount: (_isEdit && _newImages.isNotEmpty) ? _newImages.length
-                              : (_images.isNotEmpty && !_isEdit) ? _images.length
-                              : 0,
+                          itemCount: (_isEdit && _newImages.isNotEmpty)
+                              ? _newImages.length
+                              : (_images.isNotEmpty && !_isEdit)
+                                  ? _images.length
+                                  : 0,
                           shrinkWrap: true,
                           itemBuilder: (context, index) {
                             return Padding(
                                 padding: const EdgeInsets.all(8.0),
-                                child:
-                                (_isEdit && _newImages.isNotEmpty) ? Image.file(File(_newImages[index].path))
-                                    : (_images.isNotEmpty && !_isEdit) ? Image.file(File(_images[index].path))
-                                    :  null);
+                                child: (_isEdit && _newImages.isNotEmpty)
+                                    ? Image.file(File(_newImages[index].path))
+                                    : (_images.isNotEmpty && !_isEdit)
+                                        ? Image.file(File(_images[index].path))
+                                        : null);
                           },
                         ),
                       ),
-                    // if (_isEdit &&
-                    //     (_imageUrls.isNotEmpty ||
-                    //         _newImages
-                    //             .isNotEmpty)) // only display when new pictures are added
-                    //   ElevatedButton(
-                    //     style: ElevatedButton.styleFrom(
-                    //         backgroundColor: const Color(0xFFFF5A5F)),
-                    //     onPressed: showOptions,
-                    //     child: const Text('Add More Images',
-                    //         style: TextStyle(
-                    //             color: Colors.white,
-                    //             fontWeight: FontWeight.bold)),
-                    //   ),
-                    // if (_isEdit &&
-                    //     _imageUrls.isEmpty &&
-                    //     _newImages.isEmpty) // when there is no image and for
-                    //   IconButton(
-                    //       onPressed: showOptions,
-                    //       icon: const Icon(Icons.add_a_photo),
-                    //       iconSize: 50,
-                    //       color: const Color(0xFFFF5A5F)),
-                    // if (_images.isNotEmpty && !_isEdit) // for post ad
-                    //   SizedBox(
-                    //     height: 200,
-                    //     child: ListView.builder(
-                    //       scrollDirection: Axis.horizontal,
-                    //       itemCount: _images.length,
-                    //       itemBuilder: (context, index) {
-                    //         return Padding(
-                    //           padding: const EdgeInsets.all(8.0),
-                    //           child: Image.file(File(_images[index].path)),
-                    //         );
-                    //       },
-                    //     ),
-                    //   ),
-                    if ((_images.isNotEmpty && !_isEdit) || (_isEdit && (_imageUrls.isNotEmpty || _newImages.isNotEmpty))) // for post ad
+                    if ((_images.isNotEmpty && !_isEdit) ||
+                        (_isEdit &&
+                            (_imageUrls.isNotEmpty ||
+                                _newImages.isNotEmpty))) // for post ad
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF5A5F)),
+                            backgroundColor: AppColors.PRIMARY_COLOR),
                         onPressed: showOptions,
                         child: const Text('Add More Images',
                             style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold)),
                       ),
-                    if ((_images.isEmpty && !_isEdit) || (_isEdit && _imageUrls.isEmpty && _newImages.isEmpty)) // for post ad
+                    if ((_images.isEmpty && !_isEdit) ||
+                        (_isEdit &&
+                            _imageUrls.isEmpty &&
+                            _newImages.isEmpty)) // for post ad
                       IconButton(
                           onPressed: showOptions,
                           icon: const Icon(Icons.add_a_photo),
                           iconSize: 50,
-                          color: const Color(0xFFFF5A5F)),
-                    // Stack(
-                    //   children: [
-                    //     SizedBox(
-                    //       width: 120,
-                    //       height: 120,
-                    //       child: ClipRRect(
-                    //         borderRadius: BorderRadius.circular(70),
-                    //         child: _image != null
-                    //             ? Image.file(_image!)
-                    //             : _imageUrl != null
-                    //                 ? Image.network(_imageUrl!)
-                    //                 : IconButton(
-                    //                     onPressed: showOptions,
-                    //                     icon: const Icon(Icons.add_a_photo),
-                    //                     iconSize: 50,
-                    //                     color: const Color(0xFFFF5A5F)),
-                    //       ),
-                    //     ),
-                    //     if (_image != null || _imageUrl != null)
-                    //       Positioned(
-                    //         bottom: 0,
-                    //         right: 0,
-                    //         child: GestureDetector(
-                    //           onTap: showOptions,
-                    //           child: Container(
-                    //             width: 35,
-                    //             height: 35,
-                    //             decoration: BoxDecoration(
-                    //               borderRadius: BorderRadius.circular(100),
-                    //               color: const Color(0xFFFF5A5F),
-                    //             ),
-                    //             child:
-                    //                 const Icon(LineAwesomeIcons.camera_retro),
-                    //           ),
-                    //         ),
-                    //       ),
-                    //   ],
-                    // ),
+                          color: AppColors.PRIMARY_COLOR),
                     const SizedBox(height: 25),
                     TextFormField(
                       controller: _hostelNameController,
@@ -1004,7 +843,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                     Center(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF5A5F)),
+                            backgroundColor: AppColors.PRIMARY_COLOR),
                         onPressed: _getCurrentLocation,
                         child: const Text(
                           'Save Current Location',
@@ -1013,10 +852,11 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 10),
                     Center(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF5A5F)),
+                            backgroundColor: AppColors.PRIMARY_COLOR),
                         onPressed: () {
                           showFlexibleBottomSheet(
                             isDismissible: false,
@@ -1038,11 +878,12 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 10),
                     Center(
                       child: !_isEdit
                           ? ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFFF5A5F)),
+                                  backgroundColor: AppColors.PRIMARY_COLOR),
                               onPressed: () {
                                 if (_latitude == null || _longitude == null) {
                                   Fluttertoast.showToast(
@@ -1064,7 +905,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                             )
                           : ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFFF5A5F)),
+                                  backgroundColor: AppColors.PRIMARY_COLOR),
                               onPressed: _updateAd,
                               child: const Text(
                                 'Update Ad',
@@ -1088,7 +929,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         const CupertinoActivityIndicator(
-                            radius: 25, color: Color(0xFFFF5A5F)),
+                            radius: 25, color: AppColors.PRIMARY_COLOR),
                         const SizedBox(height: 10),
                         Text(loading,
                             style: const TextStyle(

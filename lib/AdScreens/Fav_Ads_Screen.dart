@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:hostel_add/resources/values/colors.dart';
 import '../Widgets/Ad_Home_Screen_Widget.dart';
 
 class FavAdsScreen extends StatefulWidget {
@@ -15,12 +16,13 @@ class _FavAdsScreenState extends State<FavAdsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final _user = FirebaseAuth.instance.currentUser;
 
-  Future<void> _removeDeletedAdsFromFavAds(List ads, ) async {
-    final currentUserData = await _firestore.collection('users').doc(_user?.uid).get();
+  Future<void> _removeDeletedAdsFromFavAds(List ads) async {
+    final currentUserData =
+        await _firestore.collection('users').doc(_user?.uid).get();
     if (ads.isNotEmpty) {
       for (var ad in ads) {
         DocumentSnapshot<Map<String, dynamic>> newAd =
-        await _firestore.collection('ads').doc(ad).get();
+            await _firestore.collection('ads').doc(ad).get();
         if (!newAd.exists) {
           currentUserData.reference.update({
             'fav_ads': FieldValue.arrayRemove([ad])
@@ -34,7 +36,7 @@ class _FavAdsScreenState extends State<FavAdsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          backgroundColor: const Color(0xFFFF5A5F),
+          backgroundColor: AppColors.PRIMARY_COLOR,
           title: const Text('Favorite Ads',
               style:
                   TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -58,20 +60,18 @@ class _FavAdsScreenState extends State<FavAdsScreen> {
                         }
                         if (!snapshot.hasData || !snapshot.data!.exists) {
                           return const Center(
-                            child: Text('User have no Favorite Ads.'), // to do
+                            child: Text('User have no Favorite Ads.'),
                           );
                         }
 
                         final List ads = snapshot.data!.get("fav_ads");
-                        // to unfav ads that were deleted by users
-                        _removeDeletedAdsFromFavAds(ads);
+                        _removeDeletedAdsFromFavAds(ads); // to unFav ads that were deleted by users
 
                         if (!ads.isEmpty) {
                           return StreamBuilder<QuerySnapshot>(
                               stream: _firestore
                                   .collection('ads')
                                   .where(FieldPath.documentId, whereIn: ads)
-                                  //.orderBy("timestamp", descending: true)
                                   .snapshots(),
                               builder: (context, snapshot) {
                                 List favoriteAds = [];
@@ -92,7 +92,6 @@ class _FavAdsScreenState extends State<FavAdsScreen> {
                                     return timestampB.compareTo(timestampA);
                                   });
                                 }
-
                                 return ListView.builder(
                                     itemCount: favoriteAds.length,
                                     itemBuilder: (context, index) {
@@ -105,11 +104,10 @@ class _FavAdsScreenState extends State<FavAdsScreen> {
                               });
                         } else {
                           return const Center(
-                            child: Text('You have no Favorite Ads.'), // to do
+                            child: Text('You have no Favorite Ads.'),
                           );
                         }
                       }))
             ]));
   }
-
 }

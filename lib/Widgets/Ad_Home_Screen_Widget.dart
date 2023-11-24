@@ -1,20 +1,22 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:hostel_add/AdScreens/Ad_Detail_Screen.dart';
 
 class AdHomeScreen extends StatelessWidget {
   final Map<String, dynamic> adData;
   final String adId;
+
   const AdHomeScreen({super.key, required this.adData, required this.adId});
 
   @override
   Widget build(BuildContext context) {
     final hostelName = adData['hostel_name'] as String? ?? 'No Hostel nme';
     final price = adData['price'] as String? ?? 'No Price';
-    final imageUrls = adData['image_urls'] != null ? adData['image_urls'] : [];
-    final address = adData['address'] as String;
-    final area = adData['area'] as String;
-    final city = adData['city'] as String;
-    final postedBy = adData['owner'];
+    final imageUrls = adData['image_urls'] ?? [];
+    final address = adData['address'] as String? ?? 'No Address';
+    final area = adData['area'] as String? ?? 'No Area';
+    final city = adData['city'] as String? ?? 'No City';
+    final postedBy = adData['owner'] as String? ?? 'No Owner Name';
 
     return GestureDetector(
       onTap: () {
@@ -32,10 +34,9 @@ class AdHomeScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (imageUrls.isNotEmpty)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
+                Center(
                   child: SizedBox(
-                    height: 200,
+                    height: 250,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: imageUrls.length,
@@ -43,14 +44,13 @@ class AdHomeScreen extends StatelessWidget {
                       itemBuilder: (context, index) {
                         return Padding(
                           padding: const EdgeInsets.only(right: 8.0),
-                          child: Image.network(imageUrls[index]),
-                          // child: Image(
-                          //     image: ResizeImage(NetworkImage(imageUrls[index]),
-                          //         height: 250,
-                          //         width: MediaQuery.of(context)
-                          //             .size
-                          //             .width
-                          //             .toInt())),
+                          child: CachedNetworkImage(
+                            placeholder: (context, url) => const Center(
+                                child: CircularProgressIndicator()),
+                            imageUrl: imageUrls[index],
+                            errorWidget: (context, url, error) =>
+                                const Icon(Icons.error),
+                          ),
                         );
                       },
                     ),

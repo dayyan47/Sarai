@@ -47,6 +47,9 @@ dependencies:
   bottom_sheet: ^4.0.0
   http: ^1.1.0
   path_provider: ^2.1.1
+  cached_network_image: ^3.3.0
+  flutter_cache_manager: ^3.3.1
+
 
 dev_dependencies:
   flutter_test:
@@ -65,7 +68,10 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
-  - assets/HostelLogo.jpg
+  - assets/icon/appIcon.png
+  - assets/HostelLogo.png
+  - assets/SarayeLogo.png
+
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

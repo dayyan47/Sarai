@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:hostel_add/resources/values/colors.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -111,7 +113,6 @@ class _EditProfileState extends State<EditProfile> {
   }
 
   void showOptions() {
-
     showCupertinoModalPopup(
       context: context,
       builder: (context) => CupertinoActionSheet(
@@ -272,7 +273,7 @@ class _EditProfileState extends State<EditProfile> {
         children: [
           Scaffold(
             appBar: AppBar(
-              backgroundColor: const Color(0xFFFF5A5F),
+              backgroundColor: AppColors.PRIMARY_COLOR,
               title: const Text(
                 'Edit Profile',
                 style:
@@ -307,8 +308,16 @@ class _EditProfileState extends State<EditProfile> {
                                 ? Image.file(newProfileImage!)
                                 : profileImageUrl == ""
                                     ? const Icon(Icons.person_sharp,
-                                        size: 100, color: Color(0xFFFF5A5F))
-                                    : Image.network(profileImageUrl!),
+                                        size: 100, color: AppColors.PRIMARY_COLOR)
+                                    : CachedNetworkImage(
+                                        placeholder: (context, url) =>
+                                            const Center(
+                                                child:
+                                                    CircularProgressIndicator()),
+                                        imageUrl: profileImageUrl!,
+                                        errorWidget: (context, url, error) =>
+                                            const Icon(Icons.error),
+                                      ),
                           ),
                         ),
                         Positioned(
@@ -321,7 +330,7 @@ class _EditProfileState extends State<EditProfile> {
                               height: 35,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(100),
-                                color: const Color(0xFFFF5A5F),
+                                color: AppColors.PRIMARY_COLOR,
                               ),
                               child: const Icon(LineAwesomeIcons.camera_retro),
                             ),
@@ -471,7 +480,7 @@ class _EditProfileState extends State<EditProfile> {
                             child: ElevatedButton(
                               onPressed: _updateUserData,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFFF5A5F),
+                                backgroundColor: AppColors.PRIMARY_COLOR,
                                 side: BorderSide.none,
                                 shape: const StadiumBorder(),
                               ),
@@ -483,28 +492,25 @@ class _EditProfileState extends State<EditProfile> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 10),
-                          // Row(
-                          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          //   children: [
-                          //     Text.rich(
-                          //       TextSpan(
-                          //           text: 'Joined Date:',
-                          //           style: const TextStyle(
-                          //               fontSize: 12, color: Colors.white),
-                          //           children: [
-                          //             TextSpan(
-                          //                 text: user != null
-                          //                     ? DateFormat('MM dd, yyyy').format(
-                          //                         user!.metadata.creationTime!)
-                          //                     : 'N/A',
-                          //                 style: const TextStyle(
-                          //                     fontSize: 12,
-                          //                     fontWeight: FontWeight.bold))
-                          //           ]),
-                          //     ),
-                          //   ],
-                          // ),
+                          const SizedBox(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text.rich(
+                                TextSpan(
+                                    text: 'Joined Date: ',
+                                    style: const TextStyle(color: Colors.grey),
+                                    children: [
+                                      TextSpan(
+                                        text: user != null
+                                            ? DateFormat('dd/MM/yyyy').format(
+                                                user!.metadata.creationTime!)
+                                            : 'N/A',
+                                      )
+                                    ]),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     )
@@ -522,7 +528,7 @@ class _EditProfileState extends State<EditProfile> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         CupertinoActivityIndicator(
-                            radius: 25, color: Color(0xFFFF5A5F)),
+                            radius: 25, color: AppColors.PRIMARY_COLOR),
                         SizedBox(height: 10),
                         Text("Updating...",
                             style: TextStyle(
