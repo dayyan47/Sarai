@@ -22,7 +22,6 @@ class EditProfile extends StatefulWidget {
 class _EditProfileState extends State<EditProfile> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   final TextEditingController _fullNameController = TextEditingController();
@@ -193,15 +192,14 @@ class _EditProfileState extends State<EditProfile> {
         });
         if (newProfileImage != null) {
           if (profileImageUrl != null && profileImageUrl != "") {
-            await _storage
-                .ref()
-                .child('profile_images/${user?.uid}.jpg')
+            await FirebaseStorage.instance
+                .refFromURL(profileImageUrl!)
                 .delete(); // delete old profile picture
           }
-
+          String imageName = '${DateTime.now()}.jpg';
           final storageRef = FirebaseStorage.instance
               .ref()
-              .child('profile_images/${user?.uid}.jpg');
+              .child('profile_images/${user?.uid}/$imageName');
           final UploadTask uploadTask = storageRef.putFile(newProfileImage!);
           final TaskSnapshot snapshot =
               await uploadTask.whenComplete(() => null);
@@ -254,9 +252,10 @@ class _EditProfileState extends State<EditProfile> {
   //
   //       print("User deleted successfully.");
   //
-  //       //To Do:
-  //       //delete all ads of this user too!
-  //       //Navigate to login screen and clear shared prefs here
+  //To Do:
+  //delete all ads of this user too!
+  //delete user profile picture also
+  //Navigate to login screen and clear shared prefs here
   //     } else {
   //       print("No user is currently signed in.");
   //     }
@@ -292,7 +291,7 @@ class _EditProfileState extends State<EditProfile> {
             ),
             body: SingleChildScrollView(
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -308,7 +307,8 @@ class _EditProfileState extends State<EditProfile> {
                                 ? Image.file(newProfileImage!)
                                 : profileImageUrl == ""
                                     ? const Icon(Icons.person_sharp,
-                                        size: 100, color: AppColors.primaryColor)
+                                        size: 100,
+                                        color: AppColors.primaryColor)
                                     : CachedNetworkImage(
                                         placeholder: (context, url) =>
                                             const Center(
