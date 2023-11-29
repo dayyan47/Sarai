@@ -22,6 +22,7 @@ class EditProfile extends StatefulWidget {
 class _EditProfileState extends State<EditProfile> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   final TextEditingController _fullNameController = TextEditingController();
@@ -190,16 +191,16 @@ class _EditProfileState extends State<EditProfile> {
           'phone_number': _phoneNumController.text,
           'date_of_birth': _dobController.text,
         });
+
         if (newProfileImage != null) {
           if (profileImageUrl != null && profileImageUrl != "") {
-            await FirebaseStorage.instance
+            await _storage
                 .refFromURL(profileImageUrl!)
                 .delete(); // delete old profile picture
           }
           String imageName = '${DateTime.now()}.jpg';
-          final storageRef = FirebaseStorage.instance
-              .ref()
-              .child('profile_images/${user?.uid}/$imageName');
+          final storageRef =
+              _storage.ref().child('profile_images/${user?.uid}/$imageName');
           final UploadTask uploadTask = storageRef.putFile(newProfileImage!);
           final TaskSnapshot snapshot =
               await uploadTask.whenComplete(() => null);
