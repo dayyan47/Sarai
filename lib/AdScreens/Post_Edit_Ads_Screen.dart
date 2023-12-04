@@ -24,9 +24,10 @@ class PostEditAdScreen extends StatefulWidget {
 }
 
 class _PostEditAdScreenState extends State<PostEditAdScreen> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final _user = FirebaseAuth.instance.currentUser;
 
   final TextEditingController _hostelNameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -45,13 +46,13 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
   String? _selectedACOption;
   String? _selectedUPSOption;
   String? _selectedInternetOption;
-  String? _selectedRoomsOption;
   String? _selectedParkingOption;
   String? _latitude;
   String? _longitude;
   String loading = "";
   bool _isLoading = false;
   bool _isEdit = false;
+  List _imageUrlsToRemove = [];
   List<XFile> _images = [];
   List<dynamic> _imageUrls = [];
   List<XFile> _newImages = [];
@@ -89,7 +90,6 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
         _selectedGender = adData['gender'];
         _selectedACOption = adData['AC'];
         _selectedUPSOption = adData['UPS'];
-        _selectedRoomsOption = adData['Rooms'];
         _selectedInternetOption = adData['Internet'];
         _selectedParkingOption = adData['Parking'];
         _latitude = adData['latitude'];
@@ -99,7 +99,6 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
           _imageUrls = adData['image_urls'];
         }
       });
-
     } catch (e) {
       print('Error fetching ad data: $e');
       Fluttertoast.showToast(
@@ -112,12 +111,12 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
     }
   }
 
-  Future<void> _uploadImages(List<XFile> images) async {
+  Future<void> _uploadImages(List<XFile> images, String adId) async {
     try {
       for (var image in images) {
         String imageName = '${DateTime.now()}.jpg';
         final imageReference =
-            FirebaseStorage.instance.ref().child('ad_images').child(imageName);
+            _storage.ref().child('ad_images').child("$adId/$imageName");
         await imageReference.putFile(File(image.path));
         final imageUrl = await imageReference.getDownloadURL();
         _imageUrls.add(imageUrl);
@@ -129,10 +128,9 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
   }
 
   Future<void> _fetchUserName() async {
-    final user = _auth.currentUser;
-    if (user != null) {
+    if (_user != null) {
       final userSnapshot =
-          await _firestore.collection('users').doc(user.uid).get();
+          await _firestore.collection('users').doc(_user!.uid).get();
       final userData = userSnapshot.data() as Map<String, dynamic>;
       final name = userData['full_name'] as String?;
       if (name != null) {
@@ -145,32 +143,18 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
 
   Future<void> _getCurrentLocation() async {
     await [Permission.location].request();
-
     bool isLocationPermissionGranted = await Permission.location.isGranted;
     if (isLocationPermissionGranted) {
       final location = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
-
-      if (location.latitude.toString().isNotEmpty &&
-          location.longitude.toString().isNotEmpty) {
-        _latitude = location.latitude.toString();
-        _longitude = location.longitude.toString();
-        Fluttertoast.showToast(
-          msg: "Current Location Saved",
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-        );
-      } else {
-        _latitude = "";
-        _longitude = "";
-        Fluttertoast.showToast(
-          msg: "Location not saved",
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-        );
-      }
+      _latitude = location.latitude.toString();
+      _longitude = location.longitude.toString();
+      Fluttertoast.showToast(
+        msg: "Current Location Saved",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+      );
     } else {
       Fluttertoast.showToast(
           msg: "Please grant Location permission first!",
@@ -185,29 +169,16 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
 
   Future<void> _getSelectedLocation(LatLng location) async {
     await [Permission.location].request();
-
     bool isLocationPermissionGranted = await Permission.location.isGranted;
     if (isLocationPermissionGranted) {
-      if (location.latitude.toString().isNotEmpty &&
-          location.longitude.toString().isNotEmpty) {
-        _latitude = location.latitude.toString();
-        _longitude = location.longitude.toString();
-        Fluttertoast.showToast(
-          msg: "New Location Saved",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-        );
-      } else {
-        _latitude = "";
-        _longitude = "";
-        Fluttertoast.showToast(
-          msg: "Location not saved",
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-        );
-      }
+      _latitude = location.latitude.toString();
+      _longitude = location.longitude.toString();
+      Fluttertoast.showToast(
+        msg: "New Location Saved",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+      );
     } else {
       Fluttertoast.showToast(
           msg: "Please grant Location permission first!",
@@ -222,10 +193,9 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
 
   Future<void> _postAd() async {
     FocusManager.instance.primaryFocus?.unfocus();
-    final user = _auth.currentUser;
     if (_formKey.currentState!.validate()) {
       _formKey.currentState?.save();
-      if (user != null) {
+      if (_user != null) {
         try {
           setState(() {
             _isLoading = true;
@@ -247,24 +217,32 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
             'AC': _selectedACOption,
             'UPS': _selectedUPSOption,
             'Internet': _selectedInternetOption,
-            'Rooms': _selectedRoomsOption,
             'Parking': _selectedParkingOption,
             'latitude': _latitude,
             'longitude': _longitude,
-            'userId': user.uid,
+            'userId': _user!.uid,
             'owner': _userName,
-            'ownerEmail': user.email,
+            'ownerEmail': _user!.email,
             'room_types': _selectedRoomTypes,
             'timestamp': FieldValue.serverTimestamp(),
           };
 
           if (_images.isNotEmpty) {
-            await _uploadImages(_images);
+            //Get adId to store ad_images in adId folder
+            var ad = await _firestore
+                .collection('ads')
+                .add(adData); //first upload ad to get adID
+            await _uploadImages(_images, ad.id);
             adData['image_urls'] = _imageUrls;
+            await _firestore.collection('ads').doc(ad.id).update(
+                adData); //Now add image_urls in that ad after uploading images
             print('Images uploaded Successfully.');
+          } else {
+            await _firestore
+                .collection('ads')
+                .add(adData); // if there are no ad images, then upload adData
           }
 
-          await _firestore.collection('ads').add(adData);
           Fluttertoast.showToast(
               msg: "Ad Posted Successfully!",
               toastLength: Toast.LENGTH_LONG,
@@ -289,15 +267,22 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
           });
         }
       }
+    } else {
+      Fluttertoast.showToast(
+          msg: "Please fill the compulsory fields!",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 2,
+          textColor: Colors.white,
+          fontSize: 10.0);
     }
   }
 
   Future<void> _updateAd() async {
     FocusManager.instance.primaryFocus?.unfocus();
-    final user = _auth.currentUser;
     if (_formKey.currentState!.validate()) {
       _formKey.currentState?.save();
-      if (user != null) {
+      if (_user != null) {
         try {
           setState(() {
             _isLoading = true;
@@ -319,27 +304,24 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
             'AC': _selectedACOption,
             'UPS': _selectedUPSOption,
             'Internet': _selectedInternetOption,
-            'Rooms': _selectedRoomsOption,
             'Parking': _selectedParkingOption,
             'latitude': _latitude,
             'longitude': _longitude,
             'room_types': _selectedRoomTypes
           };
 
+          // Remove the pictures from firebase that user removed on UI
+          if (_imageUrlsToRemove.isNotEmpty) {
+            for (var url in _imageUrlsToRemove) {
+              await FirebaseStorage.instance.refFromURL(url).delete();
+            }
+            adData['image_urls'] = _imageUrls; // update imageUrls in database
+          }
           if (_newImages.isNotEmpty) {
-            await _uploadImages(_newImages);
+            await _uploadImages(_newImages, widget.adId);
             adData['image_urls'] = _imageUrls;
             print('Images uploaded Successfully.');
           }
-
-          //   //delete old picture from storage first
-          //   if (_imageName != null && _imageName != "") {
-          //     await FirebaseStorage.instance
-          //         .ref()
-          //         .child('ad_images')
-          //         .child(_imageName!)
-          //         .delete();
-          //   }
 
           await _firestore.collection('ads').doc(widget.adId).update(adData);
           Fluttertoast.showToast(
@@ -366,6 +348,14 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
           });
         }
       }
+    } else {
+      Fluttertoast.showToast(
+          msg: "Please fill the compulsory fields!",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 2,
+          textColor: Colors.white,
+          fontSize: 10.0);
     }
   }
 
@@ -379,10 +369,9 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
       await _firestore.collection('ads').doc(widget.adId).delete();
       if (_imageUrls.isNotEmpty) {
         for (var imageUrl in _imageUrls) {
-          await FirebaseStorage.instance.refFromURL(imageUrl).delete();
+          await _storage.refFromURL(imageUrl).delete();
         }
       }
-
       Fluttertoast.showToast(
           msg: "Ad deleted successfully!",
           toastLength: Toast.LENGTH_LONG,
@@ -410,13 +399,34 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
     }
   }
 
+  void _deleteImageOld(int index) async {
+    if (_isEdit && _imageUrls.isNotEmpty) {
+      //adding image_urls to a new list to be removed after user clicks on update
+      _imageUrlsToRemove.add(_imageUrls[index]);
+      setState(() {
+        _imageUrls.removeAt(index); //Updating UI
+      });
+    }
+  }
+
+  void _deleteImageNew(int index) async {
+    if (_isEdit && _newImages.isNotEmpty) {
+      setState(() {
+        _newImages.removeAt(index);
+      });
+    } else if (!_isEdit && _images.isNotEmpty) {
+      setState(() {
+        _images.removeAt(index);
+      });
+    }
+  }
+
   Future<void> _getImageFromGallery() async {
     await [Permission.camera, Permission.storage, Permission.photos].request();
     bool isStoragePermissionGranted = await Permission.storage.isGranted;
     //bool isGalleryPermissionGranted = await Permission.photos.isGranted; // for ios
     if (isStoragePermissionGranted) {
       List<XFile>? selectedImages = await ImagePicker().pickMultiImage();
-
       if (_isEdit) {
         if (selectedImages.isNotEmpty) {
           setState(() {
@@ -497,6 +507,163 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
     );
   }
 
+  void _showImageDialogNew(BuildContext context, List<XFile> images) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          insetPadding: EdgeInsets.all(0),
+          child: Stack(
+            children: [
+              SizedBox(
+                width: MediaQuery.of(context).size.width * 0.8,
+                height: MediaQuery.of(context).size.height * 0.8,
+                child: Container(
+                  margin: EdgeInsets.all(5.0),
+                  child: PageView.builder(
+                    itemCount: images.length,
+                    itemBuilder: (context, index) {
+                      return Center(
+                        child: Stack(
+                          children: [
+                            Image.file(File(images[index].path)),
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              color: Colors.black.withOpacity(0.7),
+                              child: Text(
+                                '${index + 1}/${images.length}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const CircleAvatar(
+                    backgroundColor: Colors.white,
+                    radius: 16,
+                    child: Icon(
+                      Icons.close,
+                      color: Colors.black,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showImageDialogOld(BuildContext context, List<dynamic> images) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          insetPadding: EdgeInsets.all(0),
+          child: Stack(
+            children: [
+              SizedBox(
+                width: MediaQuery.of(context).size.width * 0.8,
+                height: MediaQuery.of(context).size.height * 0.8,
+                child: Container(
+                  margin: EdgeInsets.all(5.0),
+                  child: PageView.builder(
+                    itemCount: images.length,
+                    itemBuilder: (context, index) {
+                      return Center(
+                        child: Stack(
+                          children: [
+                            CachedNetworkImage(
+                              imageUrl: images[index],
+                              placeholder: (context, url) => const Center(
+                                  child: CircularProgressIndicator()),
+                              errorWidget: (context, url, error) =>
+                                  const Icon(Icons.error),
+                              fit: BoxFit.cover,
+                            ),
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              color: Colors.black.withOpacity(0.7),
+                              child: Text(
+                                '${index + 1}/${images.length}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const CircleAvatar(
+                    backgroundColor: Colors.white,
+                    radius: 16,
+                    child: Icon(
+                      Icons.close,
+                      color: Colors.black,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAlertDialog(BuildContext context, int index) {
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Are you sure?'),
+            content: const Text('This will remove this image from your Ad'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  _deleteImageOld(index);
+                  Navigator.pop(context);
+                },
+                child: const Text('Remove'),
+              ),
+            ],
+          );
+        });
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -513,43 +680,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                 ),
                 iconTheme: const IconThemeData(
                   color: Colors.white,
-                ),
-                actions: _isEdit
-                    ? [
-                        IconButton(
-                            icon: const Icon(
-                              Icons.delete_forever,
-                            ),
-                            onPressed: () async {
-                              final result = await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Are you sure?'),
-                                  content: const Text(
-                                      'This action will permanently delete this Ad'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, false),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                        _deleteAd();
-                                      },
-                                      child: const Text('Delete'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                              if (result == null || !result) {
-                                return;
-                              }
-                            }),
-                        const SizedBox(width: 10)
-                      ]
-                    : null),
+                )),
             body: SingleChildScrollView(
                 child: Form(
               key: _formKey,
@@ -569,14 +700,43 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                           itemCount: _imageUrls.length,
                           shrinkWrap: true,
                           itemBuilder: (context, index) {
-                            return Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: CachedNetworkImage(
-                                placeholder: (context, url) => const Center(
-                                    child: CircularProgressIndicator()),
-                                imageUrl: _imageUrls[index],
-                                errorWidget: (context, url, error) =>
-                                    const Icon(Icons.error),
+                            return GestureDetector(
+                              onTap: () {
+                                _showImageDialogOld(context, _imageUrls);
+                              },
+                              child: Stack(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: CachedNetworkImage(
+                                      imageUrl: _imageUrls[index],
+                                      placeholder: (context, url) =>
+                                          const Center(
+                                              child:
+                                                  CircularProgressIndicator()),
+                                      errorWidget: (context, url, error) =>
+                                          const Icon(Icons.error),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 8.0,
+                                    right: 8.0,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        _showAlertDialog(context, index);
+                                      },
+                                      child: const CircleAvatar(
+                                        backgroundColor: AppColors.primaryColor,
+                                        radius: 20,
+                                        child: Icon(
+                                          Icons.delete,
+                                          color: Colors.white,
+                                          size: 25,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             );
                           },
@@ -584,7 +744,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       ),
                     if ((_isEdit && _newImages.isNotEmpty) ||
                         (_images.isNotEmpty &&
-                            !_isEdit)) // for new images that are going to be uploaded for edit ad
+                            !_isEdit)) // for new images that are going to be uploaded for edit ad and post ad
                       SizedBox(
                         height: 200,
                         child: ListView.builder(
@@ -596,20 +756,52 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                                   : 0,
                           shrinkWrap: true,
                           itemBuilder: (context, index) {
-                            return Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: (_isEdit && _newImages.isNotEmpty)
-                                    ? Image.file(File(_newImages[index].path))
-                                    : (_images.isNotEmpty && !_isEdit)
-                                        ? Image.file(File(_images[index].path))
-                                        : null);
+                            return GestureDetector(
+                                onTap: () {
+                                  if (_isEdit && _newImages.isNotEmpty)
+                                    _showImageDialogNew(context, _newImages);
+                                  else if (_images.isNotEmpty && !_isEdit)
+                                    _showImageDialogNew(context, _images);
+                                },
+                                child: Stack(
+                                  children: [
+                                    Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: (_isEdit &&
+                                                _newImages.isNotEmpty)
+                                            ? Image.file(
+                                                File(_newImages[index].path))
+                                            : (_images.isNotEmpty && !_isEdit)
+                                                ? Image.file(
+                                                    File(_images[index].path))
+                                                : null),
+                                    Positioned(
+                                      bottom: 8.0,
+                                      right: 8.0,
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          _deleteImageNew(index);
+                                        },
+                                        child: const CircleAvatar(
+                                          backgroundColor:
+                                              AppColors.primaryColor,
+                                          radius: 20,
+                                          child: Icon(
+                                            Icons.delete,
+                                            color: Colors.white,
+                                            size: 25,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  ],
+                                ));
                           },
                         ),
                       ),
                     if ((_images.isNotEmpty && !_isEdit) ||
                         (_isEdit &&
-                            (_imageUrls.isNotEmpty ||
-                                _newImages.isNotEmpty))) // for post ad
+                            (_imageUrls.isNotEmpty || _newImages.isNotEmpty)))
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primaryColor),
@@ -620,9 +812,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                                 fontWeight: FontWeight.bold)),
                       ),
                     if ((_images.isEmpty && !_isEdit) ||
-                        (_isEdit &&
-                            _imageUrls.isEmpty &&
-                            _newImages.isEmpty)) // for post ad
+                        (_isEdit && _imageUrls.isEmpty && _newImages.isEmpty))
                       IconButton(
                           onPressed: showOptions,
                           icon: const Icon(Icons.add_a_photo),
@@ -633,7 +823,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       controller: _hostelNameController,
                       keyboardType: TextInputType.text,
                       decoration:
-                          const InputDecoration(labelText: 'Hostel name'),
+                          const InputDecoration(labelText: 'Hostel Name *'),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your Hostel Name';
@@ -648,7 +838,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       maxLines: 2,
                       keyboardType: TextInputType.text,
                       decoration:
-                          const InputDecoration(labelText: 'Description'),
+                          const InputDecoration(labelText: 'Description *'),
                       validator: (value) {
                         if (value!.isEmpty) {
                           return 'Please enter Description';
@@ -661,7 +851,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       controller: _priceController,
                       keyboardType: TextInputType.number,
                       decoration:
-                          const InputDecoration(labelText: 'Monthly Rent'),
+                          const InputDecoration(labelText: 'Monthly Rent *'),
                       validator: (value) {
                         if (value!.isEmpty) {
                           return 'Please enter Monthly Rent';
@@ -674,7 +864,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       controller: _phoneNumberController,
                       keyboardType: TextInputType.number,
                       decoration:
-                          const InputDecoration(labelText: 'Phone Number'),
+                          const InputDecoration(labelText: 'Phone Number *'),
                       validator: (value) {
                         if (value!.isEmpty) {
                           return 'Please enter your Phone Number';
@@ -689,7 +879,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                     TextFormField(
                       controller: _addressController,
                       keyboardType: TextInputType.text,
-                      decoration: const InputDecoration(labelText: 'Address'),
+                      decoration: const InputDecoration(labelText: 'Address *'),
                       validator: (value) {
                         if (value!.isEmpty) {
                           return 'Please enter Address';
@@ -698,14 +888,14 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       },
                     ),
                     const SizedBox(height: 10),
-                    TextFormField(
+                    TextField(
                       controller: _areaController,
                       keyboardType: TextInputType.text,
                       decoration: const InputDecoration(
                           labelText: 'Sub Area', hintText: ("(Optional)")),
                     ),
                     const SizedBox(height: 10),
-                    TextFormField(
+                    TextField(
                       controller: _fLM1,
                       keyboardType: TextInputType.text,
                       decoration: const InputDecoration(
@@ -713,7 +903,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                           hintText: "(Optional)"),
                     ),
                     const SizedBox(height: 10),
-                    TextFormField(
+                    TextField(
                       controller: _fLM2,
                       keyboardType: TextInputType.text,
                       decoration: const InputDecoration(
@@ -721,7 +911,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                           hintText: "(Optional)"),
                     ),
                     const SizedBox(height: 10),
-                    TextFormField(
+                    TextField(
                       controller: _fLM3,
                       keyboardType: TextInputType.text,
                       decoration: const InputDecoration(
@@ -730,8 +920,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      decoration:
-                          const InputDecoration(labelText: 'Select City'),
+                      decoration: const InputDecoration(labelText: 'City *'),
                       value: _selectedCity,
                       onChanged: (value) =>
                           setState(() => _selectedCity = value),
@@ -747,8 +936,8 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
-                          labelText: 'Select Hostel Type'),
+                      decoration:
+                          const InputDecoration(labelText: 'Hostel Gender *'),
                       value: _selectedGender,
                       onChanged: (value) =>
                           setState(() => _selectedGender = value),
@@ -764,8 +953,8 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      decoration:
-                          const InputDecoration(labelText: 'Air Conditioning'),
+                      decoration: const InputDecoration(
+                          labelText: 'Air Conditioning *'),
                       value: _selectedACOption,
                       onChanged: (value) =>
                           setState(() => _selectedACOption = value),
@@ -781,7 +970,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'UPS'),
+                      decoration: const InputDecoration(labelText: 'UPS *'),
                       value: _selectedUPSOption,
                       onChanged: (value) =>
                           setState(() => _selectedUPSOption = value),
@@ -797,7 +986,8 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Internet'),
+                      decoration:
+                          const InputDecoration(labelText: 'Internet *'),
                       value: _selectedInternetOption,
                       onChanged: (value) =>
                           setState(() => _selectedInternetOption = value),
@@ -814,7 +1004,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Parking'),
+                      decoration: const InputDecoration(labelText: 'Parking *'),
                       value: _selectedParkingOption,
                       onChanged: (value) =>
                           setState(() => _selectedParkingOption = value),
@@ -833,7 +1023,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Select Room Type',
+                          'Select Room Type *',
                           style: TextStyle(fontSize: 16),
                         ),
                         const SizedBox(height: 10),
@@ -853,7 +1043,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                           validator: (bool? value) {
                             if (_selectedRoomTypes.isEmpty) {
                               return 'Please Select!';
-                            } else if (value!) {
+                            } else {
                               return null;
                             }
                           },
@@ -874,7 +1064,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                           validator: (bool? value) {
                             if (_selectedRoomTypes.isEmpty) {
                               return 'Please Select!';
-                            } else if (value!) {
+                            } else {
                               return null;
                             }
                           },
@@ -895,7 +1085,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                           validator: (bool? value) {
                             if (_selectedRoomTypes.isEmpty) {
                               return 'Please Select!';
-                            } else if (value!) {
+                            } else {
                               return null;
                             }
                           },
@@ -916,114 +1106,173 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                           validator: (bool? value) {
                             if (_selectedRoomTypes.isEmpty) {
                               return 'Please Select!';
-                            } else if (value!) {
+                            } else{
                               return null;
                             }
                           },
                         ),
                       ],
                     ),
-                    // DropdownButtonFormField<String>(
-                    //   decoration:
-                    //       const InputDecoration(labelText: 'Select Room Type'),
-                    //   value: _selectedRoomsOption,
-                    //   onChanged: (value) =>
-                    //       setState(() => _selectedRoomsOption = value),
-                    //   validator: (value) =>
-                    //       value == null ? 'Please select at least one Room Option' : null,
-                    //   items: ['Single', 'Double', 'Triple', 'Quad']
-                    //       .map<DropdownMenuItem<String>>((String value) {
-                    //     return DropdownMenuItem<String>(
-                    //       value: value,
-                    //       child: Text(value),
-                    //     );
-                    //   }).toList(),
-                    // ),
                     const SizedBox(height: 15),
-                    Center(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryColor),
-                        onPressed: _getCurrentLocation,
-                        child: const Text(
-                          'Save Current Location',
-                          style: TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Center(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryColor),
-                        onPressed: () {
-                          showFlexibleBottomSheet(
-                            isDismissible: false,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(100),
+                    Row(
+                      children: [
+                        Flexible(
+                          fit: FlexFit.tight,
+                          child: FractionallySizedBox(
+                            widthFactor: 1,
+                            child: Center(
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primaryColor,
+                                ),
+                                onPressed: _getCurrentLocation,
+                                child: const Padding(
+                                  padding: EdgeInsets.all(5.0),
+                                  child: Text(
+                                    'Save Current Location',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
                             ),
-                            context: context,
-                            builder: (BuildContext context,
-                                ScrollController scrollController,
-                                double bottomSheetOffset) {
-                              return OtherLocationScreen(_getSelectedLocation);
-                            },
-                          );
-                        },
-                        child: const Text(
-                          'Save Other Location',
-                          style: TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Center(
-                      child: !_isEdit
-                          ? ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primaryColor),
-                              onPressed: () {
-                                if (_latitude == null || _longitude == null) {
-                                  Fluttertoast.showToast(
-                                    msg: "Please select your location!",
-                                    toastLength: Toast.LENGTH_LONG,
-                                    gravity: ToastGravity.BOTTOM,
-                                    timeInSecForIosWeb: 1,
+                        const SizedBox(width: 10),
+                        Flexible(
+                          fit: FlexFit.tight,
+                          child: FractionallySizedBox(
+                            widthFactor: 1,
+                            child: Center(
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primaryColor,
+                                ),
+                                onPressed: () {
+                                  FocusManager.instance.primaryFocus?.unfocus();
+                                  showFlexibleBottomSheet(
+                                    isDismissible: false,
+                                    minHeight: 0.3,
+                                    // Set the minimum height
+                                    maxHeight: 0.5,
+                                    // Set the maximum height                                    isDismissible: false,
+                                    context: context,
+                                    builder: (BuildContext context,
+                                        ScrollController scrollController,
+                                        double bottomSheetOffset) {
+                                      return OtherLocationScreen(
+                                          _getSelectedLocation);
+                                    },
                                   );
-                                }
-                                // else if (_selectedRoomTypes.isEmpty){
-                                //   Fluttertoast.showToast(
-                                //     msg: "Please select at least one room type!",
-                                //     toastLength: Toast.LENGTH_LONG,
-                                //     gravity: ToastGravity.BOTTOM,
-                                //     timeInSecForIosWeb: 1,
-                                //   );
-                                // }
-                                else {
-                                  _postAd();
-                                }
-                              },
-                              child: const Text(
-                                'Post Ad',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                            )
-                          : ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primaryColor),
-                              onPressed: _updateAd,
-                              child: const Text(
-                                'Update Ad',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold),
+                                },
+                                child: const Padding(
+                                  padding: EdgeInsets.all(5.0),
+                                  child: Text(
+                                    'Save Other Location',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
                               ),
                             ),
+                          ),
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 15),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor),
+                      onPressed: () {
+                        if (_latitude!.isEmpty || _longitude == null) {
+                          Fluttertoast.showToast(
+                            msg: "Please select your location!",
+                            toastLength: Toast.LENGTH_LONG,
+                            gravity: ToastGravity.BOTTOM,
+                            timeInSecForIosWeb: 1,
+                          );
+                        }
+                        // else if (_selectedRoomTypes.isEmpty) {
+                        //   Fluttertoast.showToast(
+                        //     msg: "Please select at least one room type!",
+                        //     toastLength: Toast.LENGTH_LONG,
+                        //     gravity: ToastGravity.BOTTOM,
+                        //     timeInSecForIosWeb: 1,
+                        //   );
+                        // }
+                        else if (_isEdit) {
+                          showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                    title: const Text('Update Ad'),
+                                    content: const Text(
+                                        'Are you sure you want to Update your Ad?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                          _updateAd();
+                                        },
+                                        child: const Text('Update'),
+                                      ),
+                                    ],
+                                  ));
+                        } else {
+                          _postAd();
+                        }
+                      },
+                      child: Text(
+                        _isEdit ? 'Update Ad' : 'Post Ad',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    if (_isEdit)
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryColor),
+                        onPressed: () => showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Are you sure?'),
+                            content: const Text(
+                                'This action will permanently delete this Ad'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  _deleteAd();
+                                },
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        child: const Text(
+                          'Delete Ad',
+                          style: TextStyle(
+                              color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    const SizedBox(height: 10),
+                    const Text("Fields with * are compulsory",
+                        style: const TextStyle(color: Colors.grey)),
                   ],
                 ),
               ),

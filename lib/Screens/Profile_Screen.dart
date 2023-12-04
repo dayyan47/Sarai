@@ -20,7 +20,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final FirebaseAuth auth = FirebaseAuth.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   void _showAlertDialog(BuildContext context) {
     Widget noButton = TextButton(
@@ -57,7 +57,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _logout(BuildContext context) async {
     bool isLoggedIn = false;
     try {
-      await auth.signOut();
+      await _auth.signOut();
 
       Fluttertoast.showToast(
           msg: "Log Out Successfully!",
@@ -133,7 +133,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final userDoc = FirebaseFirestore.instance
         .collection('users')
-        .doc(auth.currentUser?.uid);
+        .doc(_auth.currentUser?.uid);
 
     return SingleChildScrollView(
       child: StreamBuilder<DocumentSnapshot>(
@@ -147,7 +147,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
           final userData = snapshot.data!.data() as Map<String, dynamic>?;
           if (userData == null) {
-            _deleteUser(auth.currentUser);
+            _deleteUser(_auth.currentUser);
             return const Center(child: Text('User data is null.'));
           }
           final fullName = userData['full_name'] as String;
@@ -348,17 +348,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     onTap: () => _launchWhatsapp(),
                     leading: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(100),
-                        color: AppColors.primaryColor,
-                      ),
-                      child: const Icon(
-                        LineAwesomeIcons.phone,
-                        color: Colors.black,
-                      ),
-                    ),
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(100),
+                          color: AppColors.primaryColor,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(5.0),
+                          child: Image.asset('assets/WhatsAppLogoBlack.png'),
+                        )),
                     title: Text(
                       'Contact Support',
                       style: Theme.of(context)

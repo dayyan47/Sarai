@@ -70,7 +70,8 @@ flutter:
   assets:
   - assets/icon/appIcon.png
   - assets/HostelLogo.png
-  - assets/SarayeLogo.png
+  - assets/SaraiLogo.png
+  - assets/WhatsAppLogoBlack.png
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

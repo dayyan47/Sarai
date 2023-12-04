@@ -187,6 +187,77 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     );
   }
 
+  void _showImageDialog(BuildContext context, List imageUrls) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+          child: Stack(
+            children: [
+              SizedBox(
+                width: MediaQuery.of(context).size.width * 0.8,
+                height: MediaQuery.of(context).size.height * 0.8,
+                child: Container(
+                  margin: EdgeInsets.all(5.0),
+                  child: PageView.builder(
+                    itemCount: imageUrls.length,
+                    itemBuilder: (context, index) {
+                      return Center(
+                        child: Stack(
+                          children: [
+                            CachedNetworkImage(
+                              imageUrl: imageUrls[index],
+                              placeholder: (context, url) => const Center(
+                                  child: CircularProgressIndicator()),
+                              errorWidget: (context, url, error) =>
+                                  const Icon(Icons.error),
+                              fit: BoxFit.cover,
+                            ),
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              color: Colors.black.withOpacity(0.7),
+                              child: Text(
+                                '${index + 1}/${imageUrls.length}',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: CircleAvatar(
+                    backgroundColor: Colors.white,
+                    radius: 16,
+                    child: Icon(
+                      Icons.close,
+                      color: Colors.black,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -236,20 +307,18 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               }
 
               final adData = snapshot.data!.data() as Map<String, dynamic>;
-              double lat = double.parse(adData['latitude']);
-              double long = double.parse(adData['longitude']);
+              final double lat = double.parse(adData['latitude']);
+              final double long = double.parse(adData['longitude']);
               final Timestamp timestamp = adData['timestamp'];
-              final imageUrls = adData['image_urls'] ?? [];
+              final List imageUrls = adData['image_urls'] ?? [];
               final phoneNum = adData['phone_number'] as String?;
               final fLM1 = adData['FLM1'] as String;
               final fLM2 = adData['FLM2'] as String;
               final fLM3 = adData['FLM3'] as String;
               final roomTypes = adData['room_types'] ?? [];
-
               final postDate =
                   DateTime.fromMillisecondsSinceEpoch(timestamp.seconds * 1000);
-
-              Widget imageWidget;
+              final Widget imageWidget;
 
               if (imageUrls.isNotEmpty) {
                 imageWidget = SizedBox(
@@ -273,8 +342,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   ),
                 );
               } else {
-                imageWidget = const Icon(Icons.image_not_supported,
-                    size: 80, color: Colors.grey);
+                imageWidget = const Icon(Icons.no_photography_outlined,
+                    size: 80, color: AppColors.primaryColor);
               }
 
               return SingleChildScrollView(
@@ -289,7 +358,11 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                             padding: const EdgeInsets.all(15.0),
                             child: Column(
                               children: [
-                                Center(child: imageWidget),
+                                GestureDetector(
+                                    child: Center(child: imageWidget),
+                                    onTap: () => imageUrls.isNotEmpty
+                                        ? _showImageDialog(context, imageUrls)
+                                        : null),
                                 const SizedBox(height: 10),
                                 Center(
                                     child: Text(
@@ -395,42 +468,6 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                         const SizedBox(height: 10),
                                         Row(
                                           children: [
-                                            const Text('UPS: ',
-                                                style: TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.bold)),
-                                            Text('${adData['UPS']}'),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Row(
-                                          children: [
-                                            const Text('Rooms: ',
-                                                style: TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.bold)),
-                                            Text('${adData['Rooms']}'),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Row(
-                                          children: [
-                                            const Text('Air Conditioning: ',
-                                                style: TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.bold)),
-                                            Text('${adData['AC']}'),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const SizedBox(height: 10),
-                                        Row(
-                                          children: [
                                             const Text('Internet: ',
                                                 style: TextStyle(
                                                     fontWeight:
@@ -459,6 +496,32 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                           ],
                                         ),
                                       ],
+                                    ),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 10),
+                                        Row(
+                                          children: [
+                                            const Text('UPS: ',
+                                                style: TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.bold)),
+                                            Text('${adData['UPS']}'),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Row(
+                                          children: [
+                                            const Text('Air Conditioning: ',
+                                                style: TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.bold)),
+                                            Text('${adData['AC']}'),
+                                          ],
+                                        ),
+                                      ],
                                     )
                                   ],
                                 )
@@ -467,133 +530,131 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           ),
                         ),
                         const SizedBox(height: 10),
-                        if (roomTypes.isNotEmpty)
-                          Card(
-                            elevation: 3,
-                            child: Padding(
-                              padding: const EdgeInsets.all(10.0),
-                              child: SizedBox(
-                                  width: MediaQuery.of(context).size.width,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Text('Available Room Types',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 15)),
-                                      const SizedBox(height: 5),
-                                      Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            if (roomTypes.contains('Single'))
-                                              Container(
-                                                margin:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 5),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 5),
-                                                decoration: BoxDecoration(
-                                                  border: Border.all(
-                                                      color: adData['gender'] ==
-                                                              'Boys Hostel'
-                                                          ? CupertinoColors
-                                                              .activeBlue
-                                                          : CupertinoColors
-                                                              .systemPink,
-                                                      width: 2),
-                                                  borderRadius:
-                                                      BorderRadius.circular(5),
-                                                ),
-                                                child: const Text('SINGLE',
-                                                    textAlign: TextAlign.center,
-                                                    style: TextStyle(
-                                                        fontSize: 13)),
+                        Card(
+                          elevation: 3,
+                          child: Padding(
+                            padding: const EdgeInsets.all(10.0),
+                            child: SizedBox(
+                                width: MediaQuery.of(context).size.width,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Text('Available Room Types',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15)),
+                                    const SizedBox(height: 5),
+                                    Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          if (roomTypes.contains('Single'))
+                                            Container(
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 5),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 5),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                    color: adData['gender'] ==
+                                                            'Boys Hostel'
+                                                        ? CupertinoColors
+                                                            .activeBlue
+                                                        : CupertinoColors
+                                                            .systemPink,
+                                                    width: 2),
+                                                borderRadius:
+                                                    BorderRadius.circular(5),
                                               ),
-                                            if (roomTypes.contains('Double'))
-                                              Container(
-                                                margin:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 5),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 5),
-                                                decoration: BoxDecoration(
-                                                  border: Border.all(
-                                                      color: adData['gender'] ==
-                                                              'Boys Hostel'
-                                                          ? CupertinoColors
-                                                              .activeBlue
-                                                          : CupertinoColors
-                                                              .systemPink,
-                                                      width: 2),
-                                                  borderRadius:
-                                                      BorderRadius.circular(5),
-                                                ),
-                                                child: const Text('DOUBLE',
-                                                    textAlign: TextAlign.center,
-                                                    semanticsLabel: "hello",
-                                                    style: TextStyle(
-                                                        fontSize: 13)),
+                                              child: const Text('SINGLE',
+                                                  textAlign: TextAlign.center,
+                                                  style:
+                                                      TextStyle(fontSize: 13)),
+                                            ),
+                                          if (roomTypes.contains('Double'))
+                                            Container(
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 5),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 5),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                    color: adData['gender'] ==
+                                                            'Boys Hostel'
+                                                        ? CupertinoColors
+                                                            .activeBlue
+                                                        : CupertinoColors
+                                                            .systemPink,
+                                                    width: 2),
+                                                borderRadius:
+                                                    BorderRadius.circular(5),
                                               ),
-                                            if (roomTypes.contains('Triple'))
-                                              Container(
-                                                margin:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 5),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 5),
-                                                decoration: BoxDecoration(
-                                                  border: Border.all(
-                                                      color: adData['gender'] ==
-                                                              'Boys Hostel'
-                                                          ? CupertinoColors
-                                                              .activeBlue
-                                                          : CupertinoColors
-                                                              .systemPink,
-                                                      width: 2),
-                                                  borderRadius:
-                                                      BorderRadius.circular(5),
-                                                ),
-                                                child: const Text('TRIPLE',
-                                                    textAlign: TextAlign.center,
-                                                    style: TextStyle(
-                                                        fontSize: 13)),
+                                              child: const Text('DOUBLE',
+                                                  textAlign: TextAlign.center,
+                                                  semanticsLabel: "hello",
+                                                  style:
+                                                      TextStyle(fontSize: 13)),
+                                            ),
+                                          if (roomTypes.contains('Triple'))
+                                            Container(
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 5),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 5),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                    color: adData['gender'] ==
+                                                            'Boys Hostel'
+                                                        ? CupertinoColors
+                                                            .activeBlue
+                                                        : CupertinoColors
+                                                            .systemPink,
+                                                    width: 2),
+                                                borderRadius:
+                                                    BorderRadius.circular(5),
                                               ),
-                                            if (roomTypes.contains('Quad'))
-                                              Container(
-                                                margin:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 5),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 5),
-                                                decoration: BoxDecoration(
-                                                  border: Border.all(
-                                                      color: adData['gender'] ==
-                                                              'Boys Hostel'
-                                                          ? CupertinoColors
-                                                              .activeBlue
-                                                          : CupertinoColors
-                                                              .systemPink,
-                                                      width: 2),
-                                                  borderRadius:
-                                                      BorderRadius.circular(5),
-                                                ),
-                                                child: const Text('QUAD',
-                                                    textAlign: TextAlign.center,
-                                                    style: TextStyle(
-                                                        fontSize: 13)),
-                                              )
-                                          ])
-                                    ],
-                                  )),
-                            ),
+                                              child: const Text('TRIPLE',
+                                                  textAlign: TextAlign.center,
+                                                  style:
+                                                      TextStyle(fontSize: 13)),
+                                            ),
+                                          if (roomTypes.contains('Quad'))
+                                            Container(
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 5),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 5),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                    color: adData['gender'] ==
+                                                            'Boys Hostel'
+                                                        ? CupertinoColors
+                                                            .activeBlue
+                                                        : CupertinoColors
+                                                            .systemPink,
+                                                    width: 2),
+                                                borderRadius:
+                                                    BorderRadius.circular(5),
+                                              ),
+                                              child: const Text('QUAD',
+                                                  textAlign: TextAlign.center,
+                                                  style:
+                                                      TextStyle(fontSize: 13)),
+                                            )
+                                        ])
+                                  ],
+                                )),
                           ),
+                        ),
                         const SizedBox(height: 10),
                         Card(
                           elevation: 3,

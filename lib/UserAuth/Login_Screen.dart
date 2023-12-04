@@ -207,7 +207,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    Image.asset('assets/SarayeLogo.png',
+                                    Image.asset('assets/SaraiLogo.png',
                                         height: 150, fit: BoxFit.contain)
                                   ],
                                 ),
@@ -300,7 +300,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 TextButton(
                                   onPressed: _launchWhatsapp,
                                   child: const Text(
-                                    "Having problem logging in, contact Support",
+                                    "Having problem Logging In, Contact Support on WhatsApp",
+                                    textAlign: TextAlign.center,
                                     style: TextStyle(
                                         color: AppColors.primaryColor),
                                   ),
