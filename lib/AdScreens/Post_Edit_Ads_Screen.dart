@@ -24,7 +24,7 @@ class PostEditAdScreen extends StatefulWidget {
 }
 
 class _PostEditAdScreenState extends State<PostEditAdScreen> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _fireStore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final _user = FirebaseAuth.instance.currentUser;
@@ -57,6 +57,8 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
   List<dynamic> _imageUrls = [];
   List<XFile> _newImages = [];
   List<dynamic> _selectedRoomTypes = [];
+  Set<Marker> _marker = <Marker>{};
+  GoogleMapController? _mapController;
 
   @override
   void initState() {
@@ -73,7 +75,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
 
   Future<void> _fetchAdData() async {
     try {
-      final adDoc = await _firestore.collection('ads').doc(widget.adId).get();
+      final adDoc = await _fireStore.collection('ads').doc(widget.adId).get();
       final adData = adDoc.data() as Map<String, dynamic>;
       setState(() {
         _hostelNameController.text = adData['hostel_name'];
@@ -97,6 +99,9 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
         _selectedRoomTypes = adData['room_types'];
         if (adData['image_urls'] != null) {
           _imageUrls = adData['image_urls'];
+        }
+        if (_latitude != null || _longitude != null) {
+          _addMarker();
         }
       });
     } catch (e) {
@@ -130,7 +135,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
   Future<void> _fetchUserName() async {
     if (_user != null) {
       final userSnapshot =
-          await _firestore.collection('users').doc(_user!.uid).get();
+          await _fireStore.collection('users').doc(_user!.uid).get();
       final userData = userSnapshot.data() as Map<String, dynamic>;
       final name = userData['full_name'] as String?;
       if (name != null) {
@@ -149,6 +154,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
           desiredAccuracy: LocationAccuracy.high);
       _latitude = location.latitude.toString();
       _longitude = location.longitude.toString();
+      _addMarker();
       Fluttertoast.showToast(
         msg: "Current Location Saved",
         toastLength: Toast.LENGTH_LONG,
@@ -173,6 +179,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
     if (isLocationPermissionGranted) {
       _latitude = location.latitude.toString();
       _longitude = location.longitude.toString();
+      _addMarker();
       Fluttertoast.showToast(
         msg: "New Location Saved",
         toastLength: Toast.LENGTH_SHORT,
@@ -188,6 +195,36 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
           textColor: Colors.white,
           fontSize: 10.0);
       openAppSettings();
+    }
+  }
+
+  void _addMarker() {
+    if (_latitude != null && _longitude != null) {
+      if (_marker.isNotEmpty) _marker.clear;
+      setState(() {
+        _marker.add(Marker(
+          markerId: const MarkerId('hostel_location'),
+          position: LatLng(double.parse(_latitude!), double.parse(_longitude!)),
+          infoWindow: InfoWindow(
+            title: _hostelNameController.text,
+          ),
+        ));
+      });
+      // Create a new camera position
+      _updateCameraPosition();
+    }
+  }
+
+  void _updateCameraPosition() {
+    if (_mapController != null && _latitude != null && _longitude != null) {
+      _mapController
+          ?.animateCamera(CameraUpdate.newCameraPosition(CameraPosition(
+        target: LatLng(
+          double.parse(_latitude!),
+          double.parse(_longitude!),
+        ),
+        zoom: 15.0,
+      )));
     }
   }
 
@@ -229,16 +266,16 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
 
           if (_images.isNotEmpty) {
             //Get adId to store ad_images in adId folder
-            var ad = await _firestore
+            var ad = await _fireStore
                 .collection('ads')
                 .add(adData); //first upload ad to get adID
             await _uploadImages(_images, ad.id);
             adData['image_urls'] = _imageUrls;
-            await _firestore.collection('ads').doc(ad.id).update(
+            await _fireStore.collection('ads').doc(ad.id).update(
                 adData); //Now add image_urls in that ad after uploading images
             print('Images uploaded Successfully.');
           } else {
-            await _firestore
+            await _fireStore
                 .collection('ads')
                 .add(adData); // if there are no ad images, then upload adData
           }
@@ -323,7 +360,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
             print('Images uploaded Successfully.');
           }
 
-          await _firestore.collection('ads').doc(widget.adId).update(adData);
+          await _fireStore.collection('ads').doc(widget.adId).update(adData);
           Fluttertoast.showToast(
               msg: "Ad Updated Successfully!",
               toastLength: Toast.LENGTH_LONG,
@@ -366,7 +403,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
         _isLoading = true;
         loading = "Deleting...";
       });
-      await _firestore.collection('ads').doc(widget.adId).delete();
+      await _fireStore.collection('ads').doc(widget.adId).delete();
       if (_imageUrls.isNotEmpty) {
         for (var imageUrl in _imageUrls) {
           await _storage.refFromURL(imageUrl).delete();
@@ -507,88 +544,25 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
     );
   }
 
-  void _showImageDialogNew(BuildContext context, List<XFile> images) {
+  void _showImageDialog(BuildContext context, List images) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          insetPadding: EdgeInsets.all(0),
           child: Stack(
             children: [
               SizedBox(
                 width: MediaQuery.of(context).size.width * 0.8,
                 height: MediaQuery.of(context).size.height * 0.8,
                 child: Container(
-                  margin: EdgeInsets.all(5.0),
+                  margin: const EdgeInsets.all(5.0),
                   child: PageView.builder(
                     itemCount: images.length,
                     itemBuilder: (context, index) {
                       return Center(
                         child: Stack(
                           children: [
-                            Image.file(File(images[index].path)),
-                            Container(
-                              padding: EdgeInsets.all(8),
-                              color: Colors.black.withOpacity(0.7),
-                              child: Text(
-                                '${index + 1}/${images.length}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const CircleAvatar(
-                    backgroundColor: Colors.white,
-                    radius: 16,
-                    child: Icon(
-                      Icons.close,
-                      color: Colors.black,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showImageDialogOld(BuildContext context, List<dynamic> images) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          insetPadding: EdgeInsets.all(0),
-          child: Stack(
-            children: [
-              SizedBox(
-                width: MediaQuery.of(context).size.width * 0.8,
-                height: MediaQuery.of(context).size.height * 0.8,
-                child: Container(
-                  margin: EdgeInsets.all(5.0),
-                  child: PageView.builder(
-                    itemCount: images.length,
-                    itemBuilder: (context, index) {
-                      return Center(
-                        child: Stack(
-                          children: [
+                            if(images is List<String>)
                             CachedNetworkImage(
                               imageUrl: images[index],
                               placeholder: (context, url) => const Center(
@@ -597,8 +571,10 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                                   const Icon(Icons.error),
                               fit: BoxFit.cover,
                             ),
+                            if(images is List<XFile>)
+                            Image.file(File(images[index].path)),
                             Container(
-                              padding: EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(8),
                               color: Colors.black.withOpacity(0.7),
                               child: Text(
                                 '${index + 1}/${images.length}',
@@ -666,8 +642,8 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async => _isLoading ? false : true,
+    return PopScope(
+      canPop: _isLoading ? false : true,
       child: Stack(
         children: [
           Scaffold(
@@ -702,7 +678,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                           itemBuilder: (context, index) {
                             return GestureDetector(
                               onTap: () {
-                                _showImageDialogOld(context, _imageUrls);
+                                _showImageDialog(context, _imageUrls);
                               },
                               child: Stack(
                                 children: [
@@ -758,10 +734,11 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                           itemBuilder: (context, index) {
                             return GestureDetector(
                                 onTap: () {
-                                  if (_isEdit && _newImages.isNotEmpty)
-                                    _showImageDialogNew(context, _newImages);
-                                  else if (_images.isNotEmpty && !_isEdit)
-                                    _showImageDialogNew(context, _images);
+                                  if (_isEdit && _newImages.isNotEmpty) {
+                                    _showImageDialog(context, _newImages);
+                                  } else if (_images.isNotEmpty && !_isEdit) {
+                                    _showImageDialog(context, _images);
+                                  }
                                 },
                                 child: Stack(
                                   children: [
@@ -1106,12 +1083,49 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                           validator: (bool? value) {
                             if (_selectedRoomTypes.isEmpty) {
                               return 'Please Select!';
-                            } else{
+                            } else {
                               return null;
                             }
                           },
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 15),
+                    Card(
+                      elevation: 3,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 10),
+                          const Text(
+                            "Tap on red marker to show options",
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(15),
+                            height: 300,
+                            child: GoogleMap(
+                              zoomControlsEnabled: false,
+                              mapType: MapType.terrain,
+                              initialCameraPosition: CameraPosition(
+                                target:
+                                    (_latitude != null || _longitude != null)
+                                        ? LatLng(double.parse(_latitude!),
+                                            double.parse(_longitude!))
+                                        : const LatLng(31.582045, 74.329376),
+                                zoom: 15.0,
+                              ),
+                              markers: _marker,
+                              onMapCreated: (GoogleMapController controller) {
+                                _mapController = controller;
+                                _updateCameraPosition();
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 15),
                     Row(
@@ -1156,15 +1170,21 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                                   showFlexibleBottomSheet(
                                     isDismissible: false,
                                     minHeight: 0.3,
-                                    // Set the minimum height
                                     maxHeight: 0.5,
-                                    // Set the maximum height                                    isDismissible: false,
                                     context: context,
                                     builder: (BuildContext context,
                                         ScrollController scrollController,
                                         double bottomSheetOffset) {
-                                      return OtherLocationScreen(
-                                          _getSelectedLocation);
+                                      if (_latitude == null &&
+                                          _longitude == null) {
+                                        return OtherLocationScreen(
+                                            _getSelectedLocation, null, null);
+                                      } else {
+                                        return OtherLocationScreen(
+                                            _getSelectedLocation,
+                                            _latitude,
+                                            _longitude);
+                                      }
                                     },
                                   );
                                 },
@@ -1198,14 +1218,6 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                             timeInSecForIosWeb: 1,
                           );
                         }
-                        // else if (_selectedRoomTypes.isEmpty) {
-                        //   Fluttertoast.showToast(
-                        //     msg: "Please select at least one room type!",
-                        //     toastLength: Toast.LENGTH_LONG,
-                        //     gravity: ToastGravity.BOTTOM,
-                        //     timeInSecForIosWeb: 1,
-                        //   );
-                        // }
                         else if (_isEdit) {
                           showDialog<bool>(
                               context: context,
@@ -1234,7 +1246,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       },
                       child: Text(
                         _isEdit ? 'Update Ad' : 'Post Ad',
-                        style: TextStyle(
+                        style: const TextStyle(
                             color: Colors.white, fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -1272,7 +1284,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       ),
                     const SizedBox(height: 10),
                     const Text("Fields with * are compulsory",
-                        style: const TextStyle(color: Colors.grey)),
+                        style: TextStyle(color: Colors.grey)),
                   ],
                 ),
               ),

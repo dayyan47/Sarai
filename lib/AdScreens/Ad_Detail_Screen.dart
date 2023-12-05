@@ -29,6 +29,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   Icon favIcon = const Icon(LineAwesomeIcons.heart, color: Colors.white);
   Icon unFavIcon = const Icon(LineAwesomeIcons.heart_o, color: Colors.white);
   Icon _myIcon = const Icon(LineAwesomeIcons.heart_o, color: Colors.white);
+  GoogleMapController? _mapController;
+  double? _latitude, _longitude;
 
   @override
   void initState() {
@@ -200,7 +202,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 width: MediaQuery.of(context).size.width * 0.8,
                 height: MediaQuery.of(context).size.height * 0.8,
                 child: Container(
-                  margin: EdgeInsets.all(5.0),
+                  margin: const EdgeInsets.all(5.0),
                   child: PageView.builder(
                     itemCount: imageUrls.length,
                     itemBuilder: (context, index) {
@@ -216,11 +218,11 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                               fit: BoxFit.cover,
                             ),
                             Container(
-                              padding: EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(8),
                               color: Colors.black.withOpacity(0.7),
                               child: Text(
                                 '${index + 1}/${imageUrls.length}',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -240,7 +242,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   onTap: () {
                     Navigator.of(context).pop();
                   },
-                  child: CircleAvatar(
+                  child: const CircleAvatar(
                     backgroundColor: Colors.white,
                     radius: 16,
                     child: Icon(
@@ -256,6 +258,19 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         );
       },
     );
+  }
+
+  void _updateCameraPosition() {
+    if (_mapController != null && _latitude != null && _longitude != null) {
+      _mapController?.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(_latitude!, _longitude!),
+            zoom: 15.0,
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -307,11 +322,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               }
 
               final adData = snapshot.data!.data() as Map<String, dynamic>;
-              final double lat = double.parse(adData['latitude']);
-              final double long = double.parse(adData['longitude']);
+              _latitude = double.parse(adData['latitude']);
+              _longitude = double.parse(adData['longitude']);
+              _updateCameraPosition();
               final Timestamp timestamp = adData['timestamp'];
               final List imageUrls = adData['image_urls'] ?? [];
-              final phoneNum = adData['phone_number'] as String?;
+              final phoneNum = adData['phone_number'] as String;
               final fLM1 = adData['FLM1'] as String;
               final fLM2 = adData['FLM2'] as String;
               final fLM3 = adData['FLM3'] as String;
@@ -675,18 +691,22 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                   zoomControlsEnabled: false,
                                   mapType: MapType.terrain,
                                   initialCameraPosition: CameraPosition(
-                                    target: LatLng(lat, long),
+                                    target: LatLng(_latitude!, _longitude!),
                                     zoom: 15.0,
                                   ),
                                   markers: {
                                     Marker(
                                       markerId:
                                           const MarkerId('hostel_location'),
-                                      position: LatLng(lat, long),
+                                      position: LatLng(_latitude!, _longitude!),
                                       infoWindow: InfoWindow(
                                         title: '${adData["hostel_name"]}',
                                       ),
                                     ),
+                                  },
+                                  onMapCreated:
+                                      (GoogleMapController controller) {
+                                    _mapController = controller;
                                   },
                                 ),
                               ),
@@ -729,7 +749,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                             foregroundColor: Colors.blue,
                                             padding: const EdgeInsets.all(0)),
                                         onPressed: () => _showAlertDialog(
-                                            context, phoneNum!),
+                                            context, phoneNum),
                                         child: Text(
                                           adData['phone_number'],
                                           textAlign: TextAlign.start,

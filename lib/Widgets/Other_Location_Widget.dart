@@ -6,8 +6,10 @@ import 'package:hostel_add/resources/values/colors.dart';
 
 class OtherLocationScreen extends StatefulWidget {
   final Function(LatLng) onSaveLocation; // Callback Function
+  final String? lat, long;
 
-  const OtherLocationScreen(this.onSaveLocation, {super.key});
+  const OtherLocationScreen(this.onSaveLocation, this.lat, this.long,
+      {super.key});
 
   @override
   _OtherLocationScreenState createState() => _OtherLocationScreenState();
@@ -17,9 +19,48 @@ class _OtherLocationScreenState extends State<OtherLocationScreen> {
   Set<Marker> markers = <Marker>{};
   GoogleMapController? mapController;
   final Completer<GoogleMapController> _controller = Completer();
-  static const CameraPosition _kGoogle = CameraPosition(target: LatLng(31.582045, 74.329376), zoom: 15);
   bool check = false;
   LatLng? location;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.lat != null && widget.long != null) {
+      setState(() {
+        //location = widget.initialLocation;
+        if (markers.isNotEmpty) markers.clear();
+        markers.add(
+          Marker(
+            infoWindow: const InfoWindow(title: 'Existing Location'),
+            markerId: const MarkerId('existing-location'),
+            position:
+                LatLng(double.parse(widget.lat!), double.parse(widget.long!)),
+          ),
+        );
+        _moveToLocation(double.parse(widget.lat!), double.parse(widget.long!));
+      });
+    }
+  }
+
+  void _moveToLocation(double lat, double long) async {
+    if (mapController != null) {
+      await mapController?.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(lat, long),
+            zoom: 15.0,
+          ),
+        ),
+      );
+    }
+    else {
+      // If mapController is null, wait for a short duration and try again
+      // This is to handle the situation when onMapCreated is not called yet
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _moveToLocation(lat, long); // Retry after a delay
+      });
+    }
+  }
 
   void _onMapLongPress(LatLng point) {
     check = true;
@@ -53,12 +94,14 @@ class _OtherLocationScreenState extends State<OtherLocationScreen> {
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
             zoomControlsEnabled: true,
-            initialCameraPosition: _kGoogle,
+            initialCameraPosition: const CameraPosition(
+                target: LatLng(31.582045, 74.329376), zoom: 15),
             mapType: MapType.terrain,
             markers: markers,
             onLongPress: _onMapLongPress,
             onMapCreated: (GoogleMapController controller) {
               _controller.complete(controller);
+              mapController = controller;
             },
           ),
           Positioned(
