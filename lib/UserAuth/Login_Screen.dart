@@ -166,8 +166,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async => _isLoading ? false : true,
+    return PopScope(
+      canPop: _isLoading ? false : true,
       child: Stack(
         children: [
           Scaffold(
