@@ -73,16 +73,56 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.primaryColor,
-        title: const Text('Email Verification',
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
+  Widget _buildPhoneLayout() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          if (user != null && !user!.emailVerified)
+            const Text('You need to verify your email address.',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          if (user != null && !user!.emailVerified)
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryColor,
+              ),
+              onPressed: _sendVerificationEmail,
+              child: const Text(
+                'Resend Verification Email',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          const SizedBox(height: 25),
+          const Text('Have you verified your email?',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryColor,
+            ),
+            onPressed: _checkEmailVerified,
+            child: const Text(
+              'Check Status',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
-      body: Center(
+    );
+  }
+
+  Widget _buildTabletAndWebLayout(double width) {
+    return Center(
+      child: SizedBox(
+        width: width/2,
+        height: MediaQuery.sizeOf(context).height,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
@@ -124,6 +164,29 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: AppColors.primaryColor,
+        title: const Text('Email Verification',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+        body: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            if (constraints.maxWidth < 600) {
+              // For smaller screens (phones)
+              return _buildPhoneLayout();
+            } else {
+              // For larger screens (tablets, web)
+              return _buildTabletAndWebLayout(constraints.maxWidth);
+            }
+          },
+        )
     );
   }
 }

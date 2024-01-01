@@ -1,9 +1,13 @@
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:hostel_add/UserAuth/SignUp_Screen_Mobile.dart';
+import 'package:hostel_add/UserAuth/SignUp_Screen_Web.dart';
 import 'package:hostel_add/resources/values/colors.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -15,38 +19,40 @@ class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
   @override
-  _SignUpScreenState createState() => _SignUpScreenState();
+  SignUpScreenState createState() => SignUpScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen> {
+class SignUpScreenState extends State<SignUpScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final FirebaseFirestore _fireStore = FirebaseFirestore.instance;
 
-  bool _isLoading = false;
-  bool _isPasswordVisible = true;
-  String _email = '';
-  String _password = '';
-  String _fullName = '';
-  String _phoneNumber = '';
-  String _dateOfBirth = '';
-  File? _profileImage;
+  UserCredential? userCredential;
+  bool isLoading = false;
+  bool isPasswordVisible = true;
+  String email = '';
+  String password = '';
+  String fullName = '';
+  String phoneNumber = '';
+  String dateOfBirth = '';
+  File? profileImage;
+  Uint8List? imageBytes;
+  String? imageUrl;
   RegExp pakistanPhoneRegExp = RegExp(r'^03[0-9]{2}[0-9]{7}$');
   Icon passwordVisible = const Icon(LineAwesomeIcons.eye_slash);
-  DateTime _selectedDate = DateTime.now();
-  final TextEditingController _dobController = TextEditingController();
+  DateTime selectedDate = DateTime.now();
+  final TextEditingController dobController = TextEditingController();
 
-  Future<void> _getImageFromGallery() async {
+  Future<void> getImageFromGallery() async {
     await [Permission.storage, Permission.photos].request();
     bool isStoragePermissionGranted = await Permission.storage.isGranted;
-    //bool isGalleryPermissionGranted = await Permission.photos.isGranted; // for ios
+    bool isGalleryPermissionGranted = await Permission.photos.isGranted; // for ios
 
-    if (isStoragePermissionGranted) {
+    if (isStoragePermissionGranted || isGalleryPermissionGranted) {
       final pickedFile =
           await ImagePicker().pickImage(source: ImageSource.gallery);
       if (pickedFile != null) {
         setState(() {
-          _profileImage = File(pickedFile.path);
+          profileImage = File(pickedFile.path);
         });
       }
     } else {
@@ -61,7 +67,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-  Future<void> _getImageFromCamera() async {
+  Future<void> getImageFromCamera() async {
     await [Permission.camera].request();
     bool isCameraPermissionGranted = await Permission.camera.isGranted;
     if (isCameraPermissionGranted) {
@@ -70,7 +76,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (pickedFile != null) {
         setState(() {
-          _profileImage = File(pickedFile.path);
+          profileImage = File(pickedFile.path);
         });
       }
     } else {
@@ -94,14 +100,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
             child: const Text('Photo Gallery'),
             onPressed: () {
               Navigator.of(context).pop();
-              _getImageFromGallery(); // get image from gallery
+              getImageFromGallery(); // get image from gallery
             },
           ),
           CupertinoActionSheetAction(
             child: const Text('Camera'),
             onPressed: () {
               Navigator.of(context).pop();
-              _getImageFromCamera(); // get image from camera
+              getImageFromCamera(); // get image from camera
             },
           ),
         ],
@@ -109,25 +115,47 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-        context: context,
-        initialEntryMode: DatePickerEntryMode.calendar,
-        initialDate: _selectedDate,
-        firstDate: DateTime(1947),
-        lastDate: _selectedDate);
-    if (picked != null && picked != _selectedDate) {
+  void openFileExplorer() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+    );
+    if (result != null) {
       setState(() {
-        _selectedDate = picked;
-        _dobController.text = DateFormat('dd/MM/yyyy').format(picked);
+        imageBytes = result.files.single.bytes!;
       });
     }
   }
 
-  Future<void> _sendVerificationEmail() async {
-    User? user = _auth.currentUser;
+  Future<void> uploadImageWeb() async {
+    if (imageBytes != null) {
+      String imageName = '${DateTime.now()}.jpg';
+      final imageReference = FirebaseStorage.instance
+          .ref()
+          .child('profile_images/${userCredential!.user!.uid}/$imageName');
+      await imageReference.putData(imageBytes!);
+      imageUrl = await imageReference.getDownloadURL();
+    }
+  }
 
-    if (user != null && !user.emailVerified) {
+  Future<void> selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+        context: context,
+        initialEntryMode: DatePickerEntryMode.calendar,
+        initialDate: selectedDate,
+        firstDate: DateTime(1947),
+        lastDate: selectedDate);
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+        dobController.text = DateFormat('dd/MM/yyyy').format(picked);
+      });
+    }
+  }
+
+  Future<void> sendVerificationEmail() async {
+    User user = _auth.currentUser;
+
+    if (user.emailVerified) {
       try {
         await user.sendEmailVerification();
         Fluttertoast.showToast(
@@ -151,7 +179,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-  Future<void> _signUpWithEmailAndPassword() async {
+  Future<void> signUpWithEmailAndPassword() async {
     FocusManager.instance.primaryFocus?.unfocus();
     if (_formKey.currentState!.validate()) {
       _formKey.currentState?.save();
@@ -160,40 +188,70 @@ class _SignUpScreenState extends State<SignUpScreen> {
           _isLoading = true;
         });
 
-        final UserCredential userCredential = await _auth
-            .createUserWithEmailAndPassword(email: _email, password: _password);
-        if (_profileImage != null) {
-          String imageName = '${DateTime.now()}.jpg';
-          final imageReference = FirebaseStorage.instance
-              .ref()
-              .child('profile_images/${userCredential.user?.uid}/$imageName');
-          await imageReference.putFile(_profileImage!);
-          final imageUrl = await imageReference.getDownloadURL();
+        userCredential = await _auth.createUserWithEmailAndPassword(
+            email: _email, password: _password);
 
-          await _firestore
-              .collection('users')
-              .doc(userCredential.user?.uid)
-              .set({
-            'full_name': _fullName,
-            'email': _email,
-            'phone_number': _phoneNumber,
-            'date_of_birth': _dateOfBirth,
-            'profile_image_url': imageUrl,
-            'fav_ads': [],
-          });
+        if (kIsWeb) {
+          await _uploadImageWeb();
+          if (_imageBytes != null) {
+            await _fireStore
+                .collection('users')
+                .doc(userCredential!.user!.uid)
+                .set({
+              'full_name': _fullName,
+              'email': _email,
+              'phone_number': _phoneNumber,
+              'date_of_birth': _dateOfBirth,
+              'profile_image_url': imageUrl,
+              'fav_ads': [],
+            });
+          } else {
+            await _fireStore
+                .collection('users')
+                .doc(userCredential!.user!.uid)
+                .set({
+              'full_name': _fullName,
+              'email': _email,
+              'phone_number': _phoneNumber,
+              'date_of_birth': _dateOfBirth,
+              'profile_image_url': "",
+              'fav_ads': [],
+            });
+          }
         } else {
-          await _firestore
-              .collection('users')
-              .doc(userCredential.user?.uid)
-              .set({
-            'full_name': _fullName,
-            'email': _email,
-            'phone_number': _phoneNumber,
-            'date_of_birth': _dateOfBirth,
-            'profile_image_url': "",
-            'fav_ads': [],
-          });
+          if (_profileImage != null) {
+            String imageName = '${DateTime.now()}.jpg';
+            final imageReference = FirebaseStorage.instance.ref().child(
+                'profile_images/${userCredential!.user!.uid}/$imageName');
+            await imageReference.putFile(_profileImage!);
+            imageUrl = await imageReference.getDownloadURL();
+
+            await _fireStore
+                .collection('users')
+                .doc(userCredential!.user!.uid)
+                .set({
+              'full_name': _fullName,
+              'email': _email,
+              'phone_number': _phoneNumber,
+              'date_of_birth': _dateOfBirth,
+              'profile_image_url': imageUrl,
+              'fav_ads': [],
+            });
+          } else {
+            await _fireStore
+                .collection('users')
+                .doc(userCredential!.user!.uid)
+                .set({
+              'full_name': _fullName,
+              'email': _email,
+              'phone_number': _phoneNumber,
+              'date_of_birth': _dateOfBirth,
+              'profile_image_url': "",
+              'fav_ads': [],
+            });
+          }
         }
+
         Fluttertoast.showToast(
             msg: "Sign Up Successfully!",
             toastLength: Toast.LENGTH_LONG,
@@ -202,10 +260,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
             textColor: Colors.white,
             fontSize: 10.0);
 
-        print('Signed up as ${userCredential.user?.email}');
+        print('Signed up as ${userCredential!.user!.email}');
         print('Full Name: $_fullName');
         print('Phone Number: $_phoneNumber');
         print('Date of Birth: $_dateOfBirth');
+        print('Profile Image URL: $imageUrl');
 
         _sendVerificationEmail();
       } catch (e) {
@@ -232,7 +291,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: _isLoading ? false : true,
+      canPop: isLoading ? false : true,
       child: Stack(
         children: [
           Scaffold(
@@ -242,179 +301,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     style: TextStyle(
                         color: Colors.white, fontWeight: FontWeight.bold)),
                 iconTheme: const IconThemeData(color: Colors.white)),
-            body: SingleChildScrollView(
-              child: Container(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Stack(
-                      children: [
-                        SizedBox(
-                          width: 120,
-                          height: 120,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(100),
-                            child: _profileImage != null
-                                ? Image.file(_profileImage!)
-                                : const Icon(Icons.person_sharp,
-                                    size: 100, color: AppColors.primaryColor),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: GestureDetector(
-                            onTap: showOptions,
-                            child: Container(
-                              width: 35,
-                              height: 35,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(100),
-                                color: AppColors.primaryColor,
-                              ),
-                              child: const Icon(LineAwesomeIcons.camera_retro),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 25),
-                    Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          TextFormField(
-                            decoration:
-                                const InputDecoration(labelText: 'Full Name'),
-                            keyboardType: TextInputType.text,
-                            validator: (value) {
-                              if (value!.isEmpty) {
-                                return 'Please enter your full name';
-                              }
-                              return null;
-                            },
-                            onSaved: (value) => _fullName = value!,
-                          ),
-                          TextFormField(
-                            decoration:
-                                const InputDecoration(labelText: 'Email'),
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (value) {
-                              if (value!.isEmpty) {
-                                return 'Please enter your email';
-                              }
-                              return null;
-                            },
-                            onSaved: (value) => _email = value!,
-                          ),
-                          TextFormField(
-                            decoration: InputDecoration(
-                                label: const Text('Password'),
-                                suffixIcon: IconButton(
-                                  icon: passwordVisible,
-                                  onPressed: () {
-                                    setState(() {
-                                      if (_isPasswordVisible == true) {
-                                        _isPasswordVisible = false;
-                                        passwordVisible =
-                                            const Icon(LineAwesomeIcons.eye);
-                                      } else if (_isPasswordVisible == false) {
-                                        _isPasswordVisible = true;
-                                        passwordVisible = const Icon(
-                                            LineAwesomeIcons.eye_slash);
-                                      }
-                                    });
-                                  },
-                                )),
-                            obscureText: _isPasswordVisible,
-                            validator: (value) {
-                              if (value!.isEmpty) {
-                                return 'Please enter your password';
-                              }
-                              // if (!RegExp(r'[A-Z]').hasMatch(value)) {
-                              //   return 'Password must contain at least 1 capital letter';
-                              // }
-                              // if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]')
-                              //     .hasMatch(value)) {
-                              //   return 'Password must contain at least 1 special character';
-                              // }
-                              // if (!RegExp(r'[0-9]').hasMatch(value)) {
-                              //   return 'Password must contain at least 1 numeric character';
-                              // }
-                              if (value.length < 8) {
-                                return 'Password must be at least 8 characters long';
-                              }
-                              return null;
-                            },
-                            onSaved: (value) => _password = value!,
-                          ),
-                          TextFormField(
-                            decoration: const InputDecoration(
-                                labelText: 'Phone Number'),
-                            keyboardType: TextInputType.phone,
-                            validator: (value) {
-                              if (value!.isEmpty) {
-                                return 'Please enter your Phone Number';
-                              } else if (!pakistanPhoneRegExp.hasMatch(value)) {
-                                return 'Please enter Valid Phone Number';
-                              } else {
-                                return null;
-                              }
-                            },
-                            onSaved: (value) => _phoneNumber = value!,
-                          ),
-                          TextFormField(
-                            controller: _dobController,
-                            decoration: const InputDecoration(
-                                labelText: 'Date of Birth'),
-                            keyboardType: TextInputType.none,
-                            readOnly: true,
-                            showCursor: false,
-                            validator: (value) {
-                              if (value!.isEmpty) {
-                                return 'Please enter your date of birth';
-                              }
-                              return null;
-                            },
-                            onTap: () => _selectDate(context),
-                            onSaved: (value) => _dateOfBirth = value!,
-                          ),
-                          const SizedBox(height: 10),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primaryColor),
-                              onPressed: _signUpWithEmailAndPassword,
-                              child: const Text(
-                                'Sign Up',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text(
-                              'Already have an account? Login here',
-                              style: TextStyle(color: AppColors.primaryColor),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            body: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                if (constraints.maxWidth < 600) {
+                  // For smaller screens (phones)
+                  return const SignUpScreenMobile();
+                } else {
+                  // For larger screens (tablets, web)
+                  return const SignUpScreenWeb();
+                }
+              },
             ),
           ),
-          if (_isLoading)
+          if (isLoading)
             Positioned.fill(
                 child: Container(
                     color: Colors.black.withOpacity(0.8),

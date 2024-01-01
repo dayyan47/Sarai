@@ -42,17 +42,47 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-          backgroundColor: AppColors.primaryColor,
-          title: const Text('Reset Password',
-              style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          iconTheme: const IconThemeData(color: Colors.white)),
-      body: Container(
-        width: MediaQuery.of(context).size.width,
+  Widget _buildPhoneLayout() {
+    return Container(
+      width: MediaQuery.of(context).size.width,
+      height: MediaQuery.of(context).size.height,
+      padding: const EdgeInsets.all(16.0),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            TextFormField(
+              controller: _emailController,
+              decoration: const InputDecoration(labelText: 'Email'),
+              keyboardType: TextInputType.emailAddress,
+              validator: (value) {
+                if (value!.isEmpty) {
+                  return 'Please enter your email';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor),
+              onPressed: _resetPassword,
+              child: const Text('Reset Password',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabletAndWebLayout(double width) {
+    return Center(
+      child: Container(
+        width: width/2,
         height: MediaQuery.of(context).size.height,
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -85,6 +115,29 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+          backgroundColor: AppColors.primaryColor,
+          title: const Text('Reset Password',
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          iconTheme: const IconThemeData(color: Colors.white)),
+        body: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            if (constraints.maxWidth < 600) {
+              // For smaller screens (phones)
+              return _buildPhoneLayout();
+            } else {
+              // For larger screens (tablets, web)
+              return _buildTabletAndWebLayout(constraints.maxWidth);
+            }
+          },
+        )
     );
   }
 }

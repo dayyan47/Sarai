@@ -52,8 +52,7 @@ class _OtherLocationScreenState extends State<OtherLocationScreen> {
           ),
         ),
       );
-    }
-    else {
+    } else {
       // If mapController is null, wait for a short duration and try again
       // This is to handle the situation when onMapCreated is not called yet
       Future.delayed(const Duration(milliseconds: 500), () {
@@ -105,28 +104,65 @@ class _OtherLocationScreenState extends State<OtherLocationScreen> {
             },
           ),
           Positioned(
-              bottom: 15.0,
-              left: 100.0,
-              child: Center(
-                child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryColor),
-                    child: const Text("Save this Location",
-                        style: TextStyle(color: Colors.white)),
-                    onPressed: () {
-                      if (check) {
-                        widget.onSaveLocation(location!);
-                        Navigator.pop(context);
-                      } else {
-                        Fluttertoast.showToast(
-                          msg: "Please select location first!",
-                          toastLength: Toast.LENGTH_SHORT,
-                          gravity: ToastGravity.BOTTOM,
-                          timeInSecForIosWeb: 1,
-                        );
-                      }
-                    }),
-              ))
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Align(
+                    alignment: Alignment.center,
+                    child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
+                        ),
+                        child: const Text(
+                          "Save this Location",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        onPressed: () {
+                          if (check) {
+                            widget.onSaveLocation(location!);
+                            Navigator.pop(context);
+                          } else {
+                            Fluttertoast.showToast(
+                              msg: "Please select location first!",
+                              toastLength: Toast.LENGTH_SHORT,
+                              gravity: ToastGravity.BOTTOM,
+                              timeInSecForIosWeb: 1,
+                            );
+                          }
+                        }),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Positioned(
+          //     bottom: 15.0,
+          //     left: 100.0,
+          //     child: Center(
+          //       child: ElevatedButton(
+          //           style: ElevatedButton.styleFrom(
+          //               backgroundColor: AppColors.primaryColor),
+          //           child: const Text("Save this Location",
+          //               style: TextStyle(color: Colors.white)),
+          //           onPressed: () {
+          //             if (check) {
+          //               widget.onSaveLocation(location!);
+          //               Navigator.pop(context);
+          //             } else {
+          //               Fluttertoast.showToast(
+          //                 msg: "Please select location first!",
+          //                 toastLength: Toast.LENGTH_SHORT,
+          //                 gravity: ToastGravity.BOTTOM,
+          //                 timeInSecForIosWeb: 1,
+          //               );
+          //             }
+          //           }),
+          //     ))
         ],
       ),
     );

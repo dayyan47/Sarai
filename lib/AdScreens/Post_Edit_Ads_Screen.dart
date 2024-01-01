@@ -1,6 +1,8 @@
 import 'package:bottom_sheet/bottom_sheet.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -55,10 +57,14 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
   List _imageUrlsToRemove = [];
   List<XFile> _images = [];
   List<dynamic> _imageUrls = [];
-  List<XFile> _newImages = [];
+
+  //List<XFile> _newImages = [];
   List<dynamic> _selectedRoomTypes = [];
   Set<Marker> _marker = <Marker>{};
   GoogleMapController? _mapController;
+
+  //List<XFile> imagesWeb = [];
+  List<PlatformFile> _imageBytes = [];
 
   @override
   void initState() {
@@ -116,17 +122,29 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
     }
   }
 
-  Future<void> _uploadImages(List<XFile> images, String adId) async {
+  Future<void> _uploadImages(String adId) async {
     try {
-      for (var image in images) {
-        String imageName = '${DateTime.now()}.jpg';
-        final imageReference =
-            _storage.ref().child('ad_images').child("$adId/$imageName");
-        await imageReference.putFile(File(image.path));
-        final imageUrl = await imageReference.getDownloadURL();
-        _imageUrls.add(imageUrl);
+      if (kIsWeb) {
+        for (var image in _imageBytes) {
+          String imageName = '${DateTime.now()}.jpg';
+          final imageReference =
+              _storage.ref().child('ad_images').child("$adId/$imageName");
+          await imageReference.putData(image.bytes!);
+          final imageUrl = await imageReference.getDownloadURL();
+          _imageUrls.add(imageUrl);
+        }
+        print('Uploaded image URLs: $_imageUrls');
+      } else {
+        for (var image in _images) {
+          String imageName = '${DateTime.now()}.jpg';
+          final imageReference =
+              _storage.ref().child('ad_images').child("$adId/$imageName");
+          await imageReference.putFile(File(image.path));
+          final imageUrl = await imageReference.getDownloadURL();
+          _imageUrls.add(imageUrl);
+        }
+        print('Uploaded image URLs: $_imageUrls');
       }
-      print('Uploaded image URLs: $_imageUrls');
     } catch (e) {
       print('Error uploading images: $e');
     }
@@ -264,22 +282,38 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
             'timestamp': FieldValue.serverTimestamp(),
           };
 
-          if (_images.isNotEmpty) {
-            //Get adId to store ad_images in adId folder
-            var ad = await _fireStore
-                .collection('ads')
-                .add(adData); //first upload ad to get adID
-            await _uploadImages(_images, ad.id);
-            adData['image_urls'] = _imageUrls;
-            await _fireStore.collection('ads').doc(ad.id).update(
-                adData); //Now add image_urls in that ad after uploading images
-            print('Images uploaded Successfully.');
+          if (kIsWeb) {
+            if (_imageBytes.isNotEmpty) {
+              var ad = await _fireStore
+                  .collection('ads')
+                  .add(adData); //first upload ad to get adID
+              await _uploadImages(ad.id);
+              adData['image_urls'] = _imageUrls;
+              await _fireStore.collection('ads').doc(ad.id).update(
+                  adData); //Now add image_urls in that ad after uploading images
+              print('Images uploaded Successfully.');
+            } else {
+              await _fireStore
+                  .collection('ads')
+                  .add(adData); // if there are no ad images, then upload adData
+            }
           } else {
-            await _fireStore
-                .collection('ads')
-                .add(adData); // if there are no ad images, then upload adData
+            if (_images.isNotEmpty) {
+              //Get adId to store ad_images in adId folder
+              var ad = await _fireStore
+                  .collection('ads')
+                  .add(adData); //first upload ad to get adID
+              await _uploadImages(ad.id);
+              adData['image_urls'] = _imageUrls;
+              await _fireStore.collection('ads').doc(ad.id).update(
+                  adData); //Now add image_urls in that ad after uploading images
+              print('Images uploaded Successfully.');
+            } else {
+              await _fireStore
+                  .collection('ads')
+                  .add(adData); // if there are no ad images, then upload adData
+            }
           }
-
           Fluttertoast.showToast(
               msg: "Ad Posted Successfully!",
               toastLength: Toast.LENGTH_LONG,
@@ -354,8 +388,14 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
             }
             adData['image_urls'] = _imageUrls; // update imageUrls in database
           }
-          if (_newImages.isNotEmpty) {
-            await _uploadImages(_newImages, widget.adId);
+          if (kIsWeb) {
+            if (_imageBytes.isNotEmpty) {
+              await _uploadImages(widget.adId);
+              adData['image_urls'] = _imageUrls;
+              print('Images uploaded Successfully.');
+            }
+          } else if (_images.isNotEmpty) {
+            await _uploadImages(widget.adId);
             adData['image_urls'] = _imageUrls;
             print('Images uploaded Successfully.');
           }
@@ -447,15 +487,21 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
   }
 
   void _deleteImageNew(int index) async {
-    if (_isEdit && _newImages.isNotEmpty) {
+    if (kIsWeb) {
       setState(() {
-        _newImages.removeAt(index);
+        _imageBytes.removeAt(index);
       });
-    } else if (!_isEdit && _images.isNotEmpty) {
+    }
+    if (_isEdit && _images.isNotEmpty) {
       setState(() {
         _images.removeAt(index);
       });
     }
+    // else if (!_isEdit && _images.isNotEmpty) {
+    //   setState(() {
+    //     _images.removeAt(index);
+    //   });
+    // }
   }
 
   Future<void> _getImageFromGallery() async {
@@ -467,7 +513,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
       if (_isEdit) {
         if (selectedImages.isNotEmpty) {
           setState(() {
-            _newImages.addAll(selectedImages);
+            _images.addAll(selectedImages);
           });
         }
       } else {
@@ -498,7 +544,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
       if (_isEdit) {
         if (pickedFile != null) {
           setState(() {
-            _newImages.add(XFile(pickedFile.path));
+            _images.add(XFile(pickedFile.path));
           });
         }
       } else {
@@ -562,17 +608,17 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                       return Center(
                         child: Stack(
                           children: [
-                            if(images is List<String>)
-                            CachedNetworkImage(
-                              imageUrl: images[index],
-                              placeholder: (context, url) => const Center(
-                                  child: CircularProgressIndicator()),
-                              errorWidget: (context, url, error) =>
-                                  const Icon(Icons.error),
-                              fit: BoxFit.cover,
-                            ),
-                            if(images is List<XFile>)
-                            Image.file(File(images[index].path)),
+                            if (images is List<String>)
+                              CachedNetworkImage(
+                                imageUrl: images[index],
+                                placeholder: (context, url) => const Center(
+                                    child: CircularProgressIndicator()),
+                                errorWidget: (context, url, error) =>
+                                    const Icon(Icons.error),
+                                fit: BoxFit.cover,
+                              ),
+                            if (images is List<XFile>)
+                              Image.file(File(images[index].path)),
                             Container(
                               padding: const EdgeInsets.all(8),
                               color: Colors.black.withOpacity(0.7),
@@ -640,56 +686,662 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
         });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: _isLoading ? false : true,
-      child: Stack(
-        children: [
-          Scaffold(
-            appBar: AppBar(
-                backgroundColor: AppColors.primaryColor,
-                title: Text(
-                  _isEdit ? 'Edit Your Ad' : 'Post Your Ad',
-                  style: const TextStyle(
+  void _openFileExplorer() async {
+    FilePickerResult? result = await FilePicker.platform
+        .pickFiles(type: FileType.image, allowMultiple: true);
+    if (result != null) {
+      setState(() {
+        for (var file in result.files) {
+          //Uint8List bytes = file.bytes!;
+          _imageBytes.add(file);
+        }
+      });
+    }
+  }
+
+  Widget _buildPhoneLayout() {
+    return SingleChildScrollView(
+        child: Form(
+      key: _formKey,
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (_isEdit &&
+                _imageUrls
+                    .isNotEmpty) // for old images that are already uploaded for edit ad
+              SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _imageUrls.length,
+                  shrinkWrap: true,
+                  itemBuilder: (context, index) {
+                    return GestureDetector(
+                      onTap: () {
+                        _showImageDialog(context, _imageUrls);
+                      },
+                      child: Stack(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: CachedNetworkImage(
+                              imageUrl: _imageUrls[index],
+                              placeholder: (context, url) => const Center(
+                                  child: CircularProgressIndicator()),
+                              errorWidget: (context, url, error) =>
+                                  const Icon(Icons.error),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 8.0,
+                            right: 8.0,
+                            child: GestureDetector(
+                              onTap: () {
+                                _showAlertDialog(context, index);
+                              },
+                              child: const CircleAvatar(
+                                backgroundColor: AppColors.primaryColor,
+                                radius: 20,
+                                child: Icon(
+                                  Icons.delete,
+                                  color: Colors.white,
+                                  size: 25,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            if ((_isEdit && _images.isNotEmpty) ||
+                (_images.isNotEmpty &&
+                    !_isEdit)) // for new images that are going to be uploaded for edit ad and post ad
+              SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: (_isEdit && _images.isNotEmpty)
+                      ? _images.length
+                      : (_images.isNotEmpty && !_isEdit)
+                          ? _images.length
+                          : 0,
+                  shrinkWrap: true,
+                  itemBuilder: (context, index) {
+                    return GestureDetector(
+                        onTap: () {
+                          if (_isEdit && _images.isNotEmpty) {
+                            _showImageDialog(context, _images);
+                          } else if (_images.isNotEmpty && !_isEdit) {
+                            _showImageDialog(context, _images);
+                          }
+                        },
+                        child: Stack(
+                          children: [
+                            Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: (_isEdit && _images.isNotEmpty)
+                                    ? Image.file(File(_images[index].path))
+                                    : (_images.isNotEmpty && !_isEdit)
+                                        ? Image.file(File(_images[index].path))
+                                        : null),
+                            Positioned(
+                              bottom: 8.0,
+                              right: 8.0,
+                              child: GestureDetector(
+                                onTap: () {
+                                  _deleteImageNew(index);
+                                },
+                                child: const CircleAvatar(
+                                  backgroundColor: AppColors.primaryColor,
+                                  radius: 20,
+                                  child: Icon(
+                                    Icons.delete,
+                                    color: Colors.white,
+                                    size: 25,
+                                  ),
+                                ),
+                              ),
+                            )
+                          ],
+                        ));
+                  },
+                ),
+              ),
+            if ((_images.isNotEmpty && !_isEdit) ||
+                (_isEdit && (_imageUrls.isNotEmpty || _images.isNotEmpty)))
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor),
+                onPressed: showOptions,
+                child: const Text('Add More Images',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            if ((_images.isEmpty && !_isEdit) ||
+                (_isEdit && _imageUrls.isEmpty && _images.isEmpty))
+              IconButton(
+                  onPressed: showOptions,
+                  icon: const Icon(Icons.add_a_photo),
+                  iconSize: 50,
+                  color: AppColors.primaryColor),
+            const SizedBox(height: 25),
+            TextFormField(
+              controller: _hostelNameController,
+              keyboardType: TextInputType.text,
+              decoration: const InputDecoration(labelText: 'Hostel Name *'),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your Hostel Name';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: _descriptionController,
+              minLines: 1,
+              maxLines: 2,
+              keyboardType: TextInputType.text,
+              decoration: const InputDecoration(labelText: 'Description *'),
+              validator: (value) {
+                if (value!.isEmpty) {
+                  return 'Please enter Description';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: _priceController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Monthly Rent *'),
+              validator: (value) {
+                if (value!.isEmpty) {
+                  return 'Please enter Monthly Rent';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: _phoneNumberController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Phone Number *'),
+              validator: (value) {
+                if (value!.isEmpty) {
+                  return 'Please enter your Phone Number';
+                } else if (!_pakPhoneNumRegExp.hasMatch(value)) {
+                  return 'Please enter Valid Phone Number';
+                } else {
+                  return null;
+                }
+              },
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: _addressController,
+              keyboardType: TextInputType.text,
+              decoration: const InputDecoration(labelText: 'Address *'),
+              validator: (value) {
+                if (value!.isEmpty) {
+                  return 'Please enter Address';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _areaController,
+              keyboardType: TextInputType.text,
+              decoration: const InputDecoration(
+                  labelText: 'Sub Area', hintText: ("(Optional)")),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _fLM1,
+              keyboardType: TextInputType.text,
+              decoration: const InputDecoration(
+                  labelText: 'Famous Landmark 1', hintText: "(Optional)"),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _fLM2,
+              keyboardType: TextInputType.text,
+              decoration: const InputDecoration(
+                  labelText: 'Famous Landmark 2', hintText: "(Optional)"),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _fLM3,
+              keyboardType: TextInputType.text,
+              decoration: const InputDecoration(
+                  labelText: 'Famous Landmark 3', hintText: "(Optional)"),
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(labelText: 'City *'),
+              value: _selectedCity,
+              onChanged: (value) => setState(() => _selectedCity = value),
+              validator: (value) => value == null ? 'Please select City' : null,
+              items: ['Lahore', 'Karachi', 'Islamabad']
+                  .map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(labelText: 'Hostel Gender *'),
+              value: _selectedGender,
+              onChanged: (value) => setState(() => _selectedGender = value),
+              validator: (value) =>
+                  value == null ? 'Please select Hostel Gender' : null,
+              items: ['Boys Hostel', 'Girls Hostel']
+                  .map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              decoration:
+                  const InputDecoration(labelText: 'Air Conditioning *'),
+              value: _selectedACOption,
+              onChanged: (value) => setState(() => _selectedACOption = value),
+              validator: (value) =>
+                  value == null ? 'Please select AC Option' : null,
+              items:
+                  ['Yes', 'No'].map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(labelText: 'UPS *'),
+              value: _selectedUPSOption,
+              onChanged: (value) => setState(() => _selectedUPSOption = value),
+              validator: (value) =>
+                  value == null ? 'Please select UPS Option' : null,
+              items:
+                  ['Yes', 'No'].map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(labelText: 'Internet *'),
+              value: _selectedInternetOption,
+              onChanged: (value) =>
+                  setState(() => _selectedInternetOption = value),
+              validator: (value) =>
+                  value == null ? 'Please select Internet Option' : null,
+              items:
+                  ['Yes', 'No'].map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(labelText: 'Parking *'),
+              value: _selectedParkingOption,
+              onChanged: (value) =>
+                  setState(() => _selectedParkingOption = value),
+              validator: (value) =>
+                  value == null ? 'Please select Parking Option' : null,
+              items:
+                  ['Yes', 'No'].map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Select Room Type *',
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 10),
+                CheckboxFormField(
+                  value: _selectedRoomTypes.contains('Single'),
+                  errorColor: AppColors.primaryColor,
+                  title: const Text('1. Single person room'),
+                  onChanged: (bool? value) {
+                    setState(() {
+                      if (value != null && value) {
+                        _selectedRoomTypes.add('Single');
+                      } else {
+                        _selectedRoomTypes.remove('Single');
+                      }
+                    });
+                  },
+                  validator: (bool? value) {
+                    if (_selectedRoomTypes.isEmpty) {
+                      return 'Please Select!';
+                    } else {
+                      return null;
+                    }
+                  },
+                ),
+                CheckboxFormField(
+                  value: _selectedRoomTypes.contains('Double'),
+                  errorColor: AppColors.primaryColor,
+                  title: const Text('2. Two persons sharing room'),
+                  onChanged: (bool? value) {
+                    setState(() {
+                      if (value != null && value) {
+                        _selectedRoomTypes.add('Double');
+                      } else {
+                        _selectedRoomTypes.remove('Double');
+                      }
+                    });
+                  },
+                  validator: (bool? value) {
+                    if (_selectedRoomTypes.isEmpty) {
+                      return 'Please Select!';
+                    } else {
+                      return null;
+                    }
+                  },
+                ),
+                CheckboxFormField(
+                  value: _selectedRoomTypes.contains('Triple'),
+                  errorColor: AppColors.primaryColor,
+                  title: const Text('3. Three persons sharing room'),
+                  onChanged: (bool? value) {
+                    setState(() {
+                      if (value != null && value) {
+                        _selectedRoomTypes.add('Triple');
+                      } else {
+                        _selectedRoomTypes.remove('Triple');
+                      }
+                    });
+                  },
+                  validator: (bool? value) {
+                    if (_selectedRoomTypes.isEmpty) {
+                      return 'Please Select!';
+                    } else {
+                      return null;
+                    }
+                  },
+                ),
+                CheckboxFormField(
+                  value: _selectedRoomTypes.contains('Quad'),
+                  errorColor: AppColors.primaryColor,
+                  title: const Text('4. Four persons sharing room'),
+                  onChanged: (bool? value) {
+                    setState(() {
+                      if (value != null && value) {
+                        _selectedRoomTypes.add('Quad');
+                      } else {
+                        _selectedRoomTypes.remove('Quad');
+                      }
+                    });
+                  },
+                  validator: (bool? value) {
+                    if (_selectedRoomTypes.isEmpty) {
+                      return 'Please Select!';
+                    } else {
+                      return null;
+                    }
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 15),
+            Card(
+              elevation: 3,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Tap on red marker to show options",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(15),
+                    height: 300,
+                    child: GoogleMap(
+                      zoomControlsEnabled: false,
+                      mapType: MapType.terrain,
+                      initialCameraPosition: CameraPosition(
+                        target: (_latitude != null || _longitude != null)
+                            ? LatLng(double.parse(_latitude!),
+                                double.parse(_longitude!))
+                            : const LatLng(31.582045, 74.329376),
+                        zoom: 15.0,
+                      ),
+                      markers: _marker,
+                      onMapCreated: (GoogleMapController controller) {
+                        _mapController = controller;
+                        _updateCameraPosition();
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 15),
+            Row(
+              children: [
+                Flexible(
+                  fit: FlexFit.tight,
+                  child: FractionallySizedBox(
+                    widthFactor: 1,
+                    child: Center(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
+                        ),
+                        onPressed: _getCurrentLocation,
+                        child: const Padding(
+                          padding: EdgeInsets.all(5.0),
+                          child: Text(
+                            'Save Current Location',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Flexible(
+                  fit: FlexFit.tight,
+                  child: FractionallySizedBox(
+                    widthFactor: 1,
+                    child: Center(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
+                        ),
+                        onPressed: () {
+                          FocusManager.instance.primaryFocus?.unfocus();
+                          showFlexibleBottomSheet(
+                            isDismissible: false,
+                            minHeight: 0.3,
+                            maxHeight: 0.5,
+                            context: context,
+                            builder: (BuildContext context,
+                                ScrollController scrollController,
+                                double bottomSheetOffset) {
+                              if (_latitude == null && _longitude == null) {
+                                return OtherLocationScreen(
+                                    _getSelectedLocation, null, null);
+                              } else {
+                                return OtherLocationScreen(_getSelectedLocation,
+                                    _latitude, _longitude);
+                              }
+                            },
+                          );
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.all(5.0),
+                          child: Text(
+                            'Save Other Location',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 15),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor),
+              onPressed: () {
+                if (_latitude == null || _longitude == null) {
+                  Fluttertoast.showToast(
+                    msg: "Please select your location!",
+                    toastLength: Toast.LENGTH_LONG,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                  );
+                } else if (_isEdit) {
+                  showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                            title: const Text('Update Ad'),
+                            content: const Text(
+                                'Are you sure you want to Update your Ad?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  _updateAd();
+                                },
+                                child: const Text('Update'),
+                              ),
+                            ],
+                          ));
+                } else {
+                  _postAd();
+                }
+              },
+              child: Text(
+                _isEdit ? 'Update Ad' : 'Post Ad',
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 15),
+            if (_isEdit)
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor),
+                onPressed: () => showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Are you sure?'),
+                    content: const Text(
+                        'This action will permanently delete this Ad'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _deleteAd();
+                        },
+                        child: const Text('Delete'),
+                      ),
+                    ],
+                  ),
+                ),
+                child: const Text(
+                  'Delete Ad',
+                  style: TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold),
                 ),
-                iconTheme: const IconThemeData(
-                  color: Colors.white,
-                )),
-            body: SingleChildScrollView(
-                child: Form(
-              key: _formKey,
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (_isEdit &&
-                        _imageUrls
-                            .isNotEmpty) // for old images that are already uploaded for edit ad
-                      SizedBox(
-                        height: 200,
-                        child: ListView.builder(
+              ),
+            const SizedBox(height: 10),
+            const Text("Fields with * are compulsory",
+                style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+      ),
+    ));
+  }
+
+  Widget _buildTabletAndWebLayout(double width) {
+    return SingleChildScrollView(
+        child: Center(
+      child: Container(
+        width: width / 2,
+        child: Form(
+          key: _formKey,
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (_isEdit &&
+                    _imageUrls
+                        .isNotEmpty) // for old images that are already uploaded for edit ad
+                  SizedBox(
+                      height: 200,
+                      child: SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
-                          itemCount: _imageUrls.length,
-                          shrinkWrap: true,
-                          itemBuilder: (context, index) {
+                          physics: AlwaysScrollableScrollPhysics(),
+                          child: Row(
+                              children:
+                                  List.generate(_imageUrls.length, (index) {
                             return GestureDetector(
-                              onTap: () {
-                                _showImageDialog(context, _imageUrls);
-                              },
-                              child: Stack(
-                                children: [
+                                onTap: () {
+                                  _showImageDialog(context, _imageUrls);
+                                },
+                                child: Stack(children: [
                                   Padding(
                                     padding: const EdgeInsets.all(8.0),
                                     child: CachedNetworkImage(
                                       imageUrl: _imageUrls[index],
                                       placeholder: (context, url) =>
                                           const Center(
-                                              child:
-                                                  CircularProgressIndicator()),
+                                        child: CircularProgressIndicator(),
+                                      ),
                                       errorWidget: (context, url, error) =>
                                           const Icon(Icons.error),
                                     ),
@@ -712,583 +1364,753 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                                       ),
                                     ),
                                   ),
+                                ]));
+                          })))),
+
+                // SizedBox(
+                //   height: 200,
+                //   child: ListView.builder(
+                //     scrollDirection: Axis.horizontal,
+                //     itemCount: _imageUrls.length,
+                //     shrinkWrap: true,
+                //     itemBuilder: (context, index) {
+                //       return GestureDetector(
+                //         onTap: () {
+                //           _showImageDialog(context, _imageUrls);
+                //         },
+                //         child: Stack(
+                //           children: [
+                //             Padding(
+                //               padding: const EdgeInsets.all(8.0),
+                //               child: CachedNetworkImage(
+                //                 imageUrl: _imageUrls[index],
+                //                 placeholder: (context, url) => const Center(
+                //                     child: CircularProgressIndicator()),
+                //                 errorWidget: (context, url, error) =>
+                //                     const Icon(Icons.error),
+                //               ),
+                //             ),
+                //             Positioned(
+                //               bottom: 8.0,
+                //               right: 8.0,
+                //               child: GestureDetector(
+                //                 onTap: () {
+                //                   _showAlertDialog(context, index);
+                //                 },
+                //                 child: const CircleAvatar(
+                //                   backgroundColor: AppColors.primaryColor,
+                //                   radius: 20,
+                //                   child: Icon(
+                //                     Icons.delete,
+                //                     color: Colors.white,
+                //                     size: 25,
+                //                   ),
+                //                 ),
+                //               ),
+                //             ),
+                //           ],
+                //         ),
+                //       );
+                //     },
+                //   ),
+                // ),
+
+                // if(kIsWeb && _imageBytes.isNotEmpty)
+                //   SizedBox(
+                //     height: 200,
+                //     child: ListView.builder(
+                //       scrollDirection: Axis.horizontal,
+                //       itemCount: _imageBytes.length,
+                //       // itemCount: (_isEdit && _images.isNotEmpty)
+                //       //     ? _images.length
+                //       //     : (_images.isNotEmpty && !_isEdit)
+                //       //     ? _images.length
+                //       //     : 0,
+                //       shrinkWrap: true,
+                //       itemBuilder: (context, index) {
+                //         return GestureDetector(
+                //             onTap: () {
+                //               // if (_isEdit && _images.isNotEmpty) {
+                //               //   _showImageDialog(context, _images);
+                //               // } else if (_images.isNotEmpty && !_isEdit) {
+                //               //   _showImageDialog(context, _images);
+                //               // }
+                //              // _showImageDialog(context, _images)
+                //             },
+                //             child: Stack(
+                //               children: [
+                //                 Padding(
+                //                     padding: const EdgeInsets.all(8.0),
+                //                     child: Image.memory(_imageBytes[index].bytes!)
+                //                 ),
+                //
+                //                     // child: (_isEdit && _images.isNotEmpty)
+                //                     //     ? Image.file(
+                //                     //     File(_images[index].path))
+                //                     //     : (_images.isNotEmpty && !_isEdit)
+                //                     //     ? Image.file(
+                //                     //     File(_images[index].path))
+                //                     //     : null),
+                //                 Positioned(
+                //                   bottom: 8.0,
+                //                   right: 8.0,
+                //                   child: GestureDetector(
+                //                     onTap: () {
+                //                       _deleteImageNew(index);
+                //                     },
+                //                     child: const CircleAvatar(
+                //                       backgroundColor: AppColors.primaryColor,
+                //                       radius: 20,
+                //                       child: Icon(
+                //                         Icons.delete,
+                //                         color: Colors.white,
+                //                         size: 25,
+                //                       ),
+                //                     ),
+                //                   ),
+                //                 )
+                //               ],
+                //             ));
+                //       },
+                //     ),
+                //   ),
+
+                if (kIsWeb && _imageBytes.isNotEmpty)
+                  SizedBox(
+                    height: 200,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: AlwaysScrollableScrollPhysics(),
+                      child: Row(
+                        children: List.generate(
+                          _imageBytes.length,
+                          (index) {
+                            return GestureDetector(
+                              onTap: () {
+                                // Handle image tap action
+                                 _showImageDialog(context, _images);
+                              },
+                              child: Stack(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child:
+                                        Image.memory(_imageBytes[index].bytes!),
+                                  ),
+                                  Positioned(
+                                    bottom: 8.0,
+                                    right: 8.0,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        _deleteImageNew(index);
+                                      },
+                                      child: const CircleAvatar(
+                                        backgroundColor: AppColors.primaryColor,
+                                        radius: 20,
+                                        child: Icon(
+                                          Icons.delete,
+                                          color: Colors.white,
+                                          size: 25,
+                                        ),
+                                      ),
+                                    ),
+                                  )
                                 ],
                               ),
                             );
                           },
                         ),
                       ),
-                    if ((_isEdit && _newImages.isNotEmpty) ||
-                        (_images.isNotEmpty &&
-                            !_isEdit)) // for new images that are going to be uploaded for edit ad and post ad
-                      SizedBox(
-                        height: 200,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: (_isEdit && _newImages.isNotEmpty)
-                              ? _newImages.length
-                              : (_images.isNotEmpty && !_isEdit)
-                                  ? _images.length
-                                  : 0,
-                          shrinkWrap: true,
-                          itemBuilder: (context, index) {
-                            return GestureDetector(
-                                onTap: () {
-                                  if (_isEdit && _newImages.isNotEmpty) {
-                                    _showImageDialog(context, _newImages);
-                                  } else if (_images.isNotEmpty && !_isEdit) {
-                                    _showImageDialog(context, _images);
-                                  }
-                                },
-                                child: Stack(
-                                  children: [
-                                    Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: (_isEdit &&
-                                                _newImages.isNotEmpty)
+                    ),
+                  ),
+
+                if ((_isEdit && _images.isNotEmpty) ||
+                    (_images.isNotEmpty &&
+                        !_isEdit)) // for new images that are going to be uploaded for edit ad and post ad
+                  SizedBox(
+                    height: 200,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: (_isEdit && _images.isNotEmpty)
+                          ? _images.length
+                          : (_images.isNotEmpty && !_isEdit)
+                              ? _images.length
+                              : 0,
+                      shrinkWrap: true,
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                            onTap: () {
+                              if (_isEdit && _images.isNotEmpty) {
+                                _showImageDialog(context, _images);
+                              } else if (_images.isNotEmpty && !_isEdit) {
+                                _showImageDialog(context, _images);
+                              }
+                            },
+                            child: Stack(
+                              children: [
+                                Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: (_isEdit && _images.isNotEmpty)
+                                        ? Image.file(File(_images[index].path))
+                                        : (_images.isNotEmpty && !_isEdit)
                                             ? Image.file(
-                                                File(_newImages[index].path))
-                                            : (_images.isNotEmpty && !_isEdit)
-                                                ? Image.file(
-                                                    File(_images[index].path))
-                                                : null),
-                                    Positioned(
-                                      bottom: 8.0,
-                                      right: 8.0,
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          _deleteImageNew(index);
-                                        },
-                                        child: const CircleAvatar(
-                                          backgroundColor:
-                                              AppColors.primaryColor,
-                                          radius: 20,
-                                          child: Icon(
-                                            Icons.delete,
-                                            color: Colors.white,
-                                            size: 25,
-                                          ),
-                                        ),
+                                                File(_images[index].path))
+                                            : null),
+                                Positioned(
+                                  bottom: 8.0,
+                                  right: 8.0,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      _deleteImageNew(index);
+                                    },
+                                    child: const CircleAvatar(
+                                      backgroundColor: AppColors.primaryColor,
+                                      radius: 20,
+                                      child: Icon(
+                                        Icons.delete,
+                                        color: Colors.white,
+                                        size: 25,
                                       ),
-                                    )
-                                  ],
-                                ));
-                          },
-                        ),
-                      ),
-                    if ((_images.isNotEmpty && !_isEdit) ||
-                        (_isEdit &&
-                            (_imageUrls.isNotEmpty || _newImages.isNotEmpty)))
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryColor),
-                        onPressed: showOptions,
-                        child: const Text('Add More Images',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold)),
-                      ),
-                    if ((_images.isEmpty && !_isEdit) ||
-                        (_isEdit && _imageUrls.isEmpty && _newImages.isEmpty))
-                      IconButton(
-                          onPressed: showOptions,
-                          icon: const Icon(Icons.add_a_photo),
-                          iconSize: 50,
-                          color: AppColors.primaryColor),
-                    const SizedBox(height: 25),
-                    TextFormField(
-                      controller: _hostelNameController,
-                      keyboardType: TextInputType.text,
-                      decoration:
-                          const InputDecoration(labelText: 'Hostel Name *'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your Hostel Name';
-                        }
-                        return null;
+                                    ),
+                                  ),
+                                )
+                              ],
+                            ));
                       },
                     ),
-                    const SizedBox(height: 10),
-                    TextFormField(
-                      controller: _descriptionController,
-                      minLines: 1,
-                      maxLines: 2,
-                      keyboardType: TextInputType.text,
-                      decoration:
-                          const InputDecoration(labelText: 'Description *'),
-                      validator: (value) {
-                        if (value!.isEmpty) {
-                          return 'Please enter Description';
-                        }
-                        return null;
-                      },
+                  ),
+                if ((_images.isNotEmpty && !_isEdit) ||
+                    (_isEdit && (_imageUrls.isNotEmpty || _images.isNotEmpty)))
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor),
+                    onPressed: _openFileExplorer,
+                    child: const Text('Add More Images',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                if ((_images.isEmpty && !_isEdit) ||
+                    (_isEdit && _imageUrls.isEmpty && _images.isEmpty))
+                  IconButton(
+                      onPressed: _openFileExplorer,
+                      icon: const Icon(Icons.add_a_photo),
+                      iconSize: 50,
+                      color: AppColors.primaryColor),
+                const SizedBox(height: 25),
+                TextFormField(
+                  controller: _hostelNameController,
+                  keyboardType: TextInputType.text,
+                  decoration: const InputDecoration(labelText: 'Hostel Name *'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your Hostel Name';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _descriptionController,
+                  minLines: 1,
+                  maxLines: 2,
+                  keyboardType: TextInputType.text,
+                  decoration: const InputDecoration(labelText: 'Description *'),
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Please enter Description';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _priceController,
+                  keyboardType: TextInputType.number,
+                  decoration:
+                      const InputDecoration(labelText: 'Monthly Rent *'),
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Please enter Monthly Rent';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _phoneNumberController,
+                  keyboardType: TextInputType.number,
+                  decoration:
+                      const InputDecoration(labelText: 'Phone Number *'),
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Please enter your Phone Number';
+                    } else if (!_pakPhoneNumRegExp.hasMatch(value)) {
+                      return 'Please enter Valid Phone Number';
+                    } else {
+                      return null;
+                    }
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _addressController,
+                  keyboardType: TextInputType.text,
+                  decoration: const InputDecoration(labelText: 'Address *'),
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Please enter Address';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _areaController,
+                  keyboardType: TextInputType.text,
+                  decoration: const InputDecoration(
+                      labelText: 'Sub Area', hintText: ("(Optional)")),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _fLM1,
+                  keyboardType: TextInputType.text,
+                  decoration: const InputDecoration(
+                      labelText: 'Famous Landmark 1', hintText: "(Optional)"),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _fLM2,
+                  keyboardType: TextInputType.text,
+                  decoration: const InputDecoration(
+                      labelText: 'Famous Landmark 2', hintText: "(Optional)"),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _fLM3,
+                  keyboardType: TextInputType.text,
+                  decoration: const InputDecoration(
+                      labelText: 'Famous Landmark 3', hintText: "(Optional)"),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(labelText: 'City *'),
+                  value: _selectedCity,
+                  onChanged: (value) => setState(() => _selectedCity = value),
+                  validator: (value) =>
+                      value == null ? 'Please select City' : null,
+                  items: ['Lahore', 'Karachi', 'Islamabad']
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  decoration:
+                      const InputDecoration(labelText: 'Hostel Gender *'),
+                  value: _selectedGender,
+                  onChanged: (value) => setState(() => _selectedGender = value),
+                  validator: (value) =>
+                      value == null ? 'Please select Hostel Gender' : null,
+                  items: ['Boys Hostel', 'Girls Hostel']
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  decoration:
+                      const InputDecoration(labelText: 'Air Conditioning *'),
+                  value: _selectedACOption,
+                  onChanged: (value) =>
+                      setState(() => _selectedACOption = value),
+                  validator: (value) =>
+                      value == null ? 'Please select AC Option' : null,
+                  items: ['Yes', 'No']
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(labelText: 'UPS *'),
+                  value: _selectedUPSOption,
+                  onChanged: (value) =>
+                      setState(() => _selectedUPSOption = value),
+                  validator: (value) =>
+                      value == null ? 'Please select UPS Option' : null,
+                  items: ['Yes', 'No']
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(labelText: 'Internet *'),
+                  value: _selectedInternetOption,
+                  onChanged: (value) =>
+                      setState(() => _selectedInternetOption = value),
+                  validator: (value) =>
+                      value == null ? 'Please select Internet Option' : null,
+                  items: ['Yes', 'No']
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(labelText: 'Parking *'),
+                  value: _selectedParkingOption,
+                  onChanged: (value) =>
+                      setState(() => _selectedParkingOption = value),
+                  validator: (value) =>
+                      value == null ? 'Please select Parking Option' : null,
+                  items: ['Yes', 'No']
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Select Room Type *',
+                      style: TextStyle(fontSize: 16),
                     ),
                     const SizedBox(height: 10),
-                    TextFormField(
-                      controller: _priceController,
-                      keyboardType: TextInputType.number,
-                      decoration:
-                          const InputDecoration(labelText: 'Monthly Rent *'),
-                      validator: (value) {
-                        if (value!.isEmpty) {
-                          return 'Please enter Monthly Rent';
-                        }
-                        return null;
+                    CheckboxFormField(
+                      value: _selectedRoomTypes.contains('Single'),
+                      errorColor: AppColors.primaryColor,
+                      title: const Text('1. Single person room'),
+                      onChanged: (bool? value) {
+                        setState(() {
+                          if (value != null && value) {
+                            _selectedRoomTypes.add('Single');
+                          } else {
+                            _selectedRoomTypes.remove('Single');
+                          }
+                        });
                       },
-                    ),
-                    const SizedBox(height: 10),
-                    TextFormField(
-                      controller: _phoneNumberController,
-                      keyboardType: TextInputType.number,
-                      decoration:
-                          const InputDecoration(labelText: 'Phone Number *'),
-                      validator: (value) {
-                        if (value!.isEmpty) {
-                          return 'Please enter your Phone Number';
-                        } else if (!_pakPhoneNumRegExp.hasMatch(value)) {
-                          return 'Please enter Valid Phone Number';
+                      validator: (bool? value) {
+                        if (_selectedRoomTypes.isEmpty) {
+                          return 'Please Select!';
                         } else {
                           return null;
                         }
                       },
                     ),
-                    const SizedBox(height: 10),
-                    TextFormField(
-                      controller: _addressController,
-                      keyboardType: TextInputType.text,
-                      decoration: const InputDecoration(labelText: 'Address *'),
-                      validator: (value) {
-                        if (value!.isEmpty) {
-                          return 'Please enter Address';
+                    CheckboxFormField(
+                      value: _selectedRoomTypes.contains('Double'),
+                      errorColor: AppColors.primaryColor,
+                      title: const Text('2. Two persons sharing room'),
+                      onChanged: (bool? value) {
+                        setState(() {
+                          if (value != null && value) {
+                            _selectedRoomTypes.add('Double');
+                          } else {
+                            _selectedRoomTypes.remove('Double');
+                          }
+                        });
+                      },
+                      validator: (bool? value) {
+                        if (_selectedRoomTypes.isEmpty) {
+                          return 'Please Select!';
+                        } else {
+                          return null;
                         }
-                        return null;
                       },
                     ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _areaController,
-                      keyboardType: TextInputType.text,
-                      decoration: const InputDecoration(
-                          labelText: 'Sub Area', hintText: ("(Optional)")),
+                    CheckboxFormField(
+                      value: _selectedRoomTypes.contains('Triple'),
+                      errorColor: AppColors.primaryColor,
+                      title: const Text('3. Three persons sharing room'),
+                      onChanged: (bool? value) {
+                        setState(() {
+                          if (value != null && value) {
+                            _selectedRoomTypes.add('Triple');
+                          } else {
+                            _selectedRoomTypes.remove('Triple');
+                          }
+                        });
+                      },
+                      validator: (bool? value) {
+                        if (_selectedRoomTypes.isEmpty) {
+                          return 'Please Select!';
+                        } else {
+                          return null;
+                        }
+                      },
                     ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _fLM1,
-                      keyboardType: TextInputType.text,
-                      decoration: const InputDecoration(
-                          labelText: 'Famous Landmark 1',
-                          hintText: "(Optional)"),
+                    CheckboxFormField(
+                      value: _selectedRoomTypes.contains('Quad'),
+                      errorColor: AppColors.primaryColor,
+                      title: const Text('4. Four persons sharing room'),
+                      onChanged: (bool? value) {
+                        setState(() {
+                          if (value != null && value) {
+                            _selectedRoomTypes.add('Quad');
+                          } else {
+                            _selectedRoomTypes.remove('Quad');
+                          }
+                        });
+                      },
+                      validator: (bool? value) {
+                        if (_selectedRoomTypes.isEmpty) {
+                          return 'Please Select!';
+                        } else {
+                          return null;
+                        }
+                      },
                     ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _fLM2,
-                      keyboardType: TextInputType.text,
-                      decoration: const InputDecoration(
-                          labelText: 'Famous Landmark 2',
-                          hintText: "(Optional)"),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _fLM3,
-                      keyboardType: TextInputType.text,
-                      decoration: const InputDecoration(
-                          labelText: 'Famous Landmark 3',
-                          hintText: "(Optional)"),
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'City *'),
-                      value: _selectedCity,
-                      onChanged: (value) =>
-                          setState(() => _selectedCity = value),
-                      validator: (value) =>
-                          value == null ? 'Please select City' : null,
-                      items: ['Lahore', 'Karachi', 'Islamabad']
-                          .map<DropdownMenuItem<String>>((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      decoration:
-                          const InputDecoration(labelText: 'Hostel Gender *'),
-                      value: _selectedGender,
-                      onChanged: (value) =>
-                          setState(() => _selectedGender = value),
-                      validator: (value) =>
-                          value == null ? 'Please select Hostel Gender' : null,
-                      items: ['Boys Hostel', 'Girls Hostel']
-                          .map<DropdownMenuItem<String>>((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
-                          labelText: 'Air Conditioning *'),
-                      value: _selectedACOption,
-                      onChanged: (value) =>
-                          setState(() => _selectedACOption = value),
-                      validator: (value) =>
-                          value == null ? 'Please select AC Option' : null,
-                      items: ['Yes', 'No']
-                          .map<DropdownMenuItem<String>>((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'UPS *'),
-                      value: _selectedUPSOption,
-                      onChanged: (value) =>
-                          setState(() => _selectedUPSOption = value),
-                      validator: (value) =>
-                          value == null ? 'Please select UPS Option' : null,
-                      items: ['Yes', 'No']
-                          .map<DropdownMenuItem<String>>((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      decoration:
-                          const InputDecoration(labelText: 'Internet *'),
-                      value: _selectedInternetOption,
-                      onChanged: (value) =>
-                          setState(() => _selectedInternetOption = value),
-                      validator: (value) => value == null
-                          ? 'Please select Internet Option'
-                          : null,
-                      items: ['Yes', 'No']
-                          .map<DropdownMenuItem<String>>((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Parking *'),
-                      value: _selectedParkingOption,
-                      onChanged: (value) =>
-                          setState(() => _selectedParkingOption = value),
-                      validator: (value) =>
-                          value == null ? 'Please select Parking Option' : null,
-                      items: ['Yes', 'No']
-                          .map<DropdownMenuItem<String>>((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Select Room Type *',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(height: 10),
-                        CheckboxFormField(
-                          value: _selectedRoomTypes.contains('Single'),
-                          errorColor: AppColors.primaryColor,
-                          title: const Text('1. Single person room'),
-                          onChanged: (bool? value) {
-                            setState(() {
-                              if (value != null && value) {
-                                _selectedRoomTypes.add('Single');
-                              } else {
-                                _selectedRoomTypes.remove('Single');
-                              }
-                            });
-                          },
-                          validator: (bool? value) {
-                            if (_selectedRoomTypes.isEmpty) {
-                              return 'Please Select!';
-                            } else {
-                              return null;
-                            }
-                          },
-                        ),
-                        CheckboxFormField(
-                          value: _selectedRoomTypes.contains('Double'),
-                          errorColor: AppColors.primaryColor,
-                          title: const Text('2. Two persons sharing room'),
-                          onChanged: (bool? value) {
-                            setState(() {
-                              if (value != null && value) {
-                                _selectedRoomTypes.add('Double');
-                              } else {
-                                _selectedRoomTypes.remove('Double');
-                              }
-                            });
-                          },
-                          validator: (bool? value) {
-                            if (_selectedRoomTypes.isEmpty) {
-                              return 'Please Select!';
-                            } else {
-                              return null;
-                            }
-                          },
-                        ),
-                        CheckboxFormField(
-                          value: _selectedRoomTypes.contains('Triple'),
-                          errorColor: AppColors.primaryColor,
-                          title: const Text('3. Three persons sharing room'),
-                          onChanged: (bool? value) {
-                            setState(() {
-                              if (value != null && value) {
-                                _selectedRoomTypes.add('Triple');
-                              } else {
-                                _selectedRoomTypes.remove('Triple');
-                              }
-                            });
-                          },
-                          validator: (bool? value) {
-                            if (_selectedRoomTypes.isEmpty) {
-                              return 'Please Select!';
-                            } else {
-                              return null;
-                            }
-                          },
-                        ),
-                        CheckboxFormField(
-                          value: _selectedRoomTypes.contains('Quad'),
-                          errorColor: AppColors.primaryColor,
-                          title: const Text('4. Four persons sharing room'),
-                          onChanged: (bool? value) {
-                            setState(() {
-                              if (value != null && value) {
-                                _selectedRoomTypes.add('Quad');
-                              } else {
-                                _selectedRoomTypes.remove('Quad');
-                              }
-                            });
-                          },
-                          validator: (bool? value) {
-                            if (_selectedRoomTypes.isEmpty) {
-                              return 'Please Select!';
-                            } else {
-                              return null;
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 15),
-                    Card(
-                      elevation: 3,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          const SizedBox(height: 10),
-                          const Text(
-                            "Tap on red marker to show options",
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 15),
+                  ],
+                ),
+                const SizedBox(height: 15),
+                Card(
+                  elevation: 3,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 10),
+                      const Text(
+                        "Tap on red marker to show options",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(15),
+                        height: 300,
+                        child: GoogleMap(
+                          zoomControlsEnabled: false,
+                          mapType: MapType.terrain,
+                          initialCameraPosition: CameraPosition(
+                            target: (_latitude != null || _longitude != null)
+                                ? LatLng(double.parse(_latitude!),
+                                    double.parse(_longitude!))
+                                : const LatLng(31.582045, 74.329376),
+                            zoom: 15.0,
                           ),
-                          Container(
-                            padding: const EdgeInsets.all(15),
-                            height: 300,
-                            child: GoogleMap(
-                              zoomControlsEnabled: false,
-                              mapType: MapType.terrain,
-                              initialCameraPosition: CameraPosition(
-                                target:
-                                    (_latitude != null || _longitude != null)
-                                        ? LatLng(double.parse(_latitude!),
-                                            double.parse(_longitude!))
-                                        : const LatLng(31.582045, 74.329376),
-                                zoom: 15.0,
-                              ),
-                              markers: _marker,
-                              onMapCreated: (GoogleMapController controller) {
-                                _mapController = controller;
-                                _updateCameraPosition();
-                              },
+                          markers: _marker,
+                          onMapCreated: (GoogleMapController controller) {
+                            _mapController = controller;
+                            _updateCameraPosition();
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 15),
+                Row(
+                  children: [
+                    Flexible(
+                      fit: FlexFit.tight,
+                      child: FractionallySizedBox(
+                        widthFactor: 1,
+                        child: Center(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryColor,
                             ),
+                            onPressed: _getCurrentLocation,
+                            child: const Padding(
+                              padding: EdgeInsets.all(5.0),
+                              child: Text(
+                                'Save Current Location',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      fit: FlexFit.tight,
+                      child: FractionallySizedBox(
+                        widthFactor: 1,
+                        child: Center(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryColor,
+                            ),
+                            onPressed: () {
+                              FocusManager.instance.primaryFocus?.unfocus();
+                              showFlexibleBottomSheet(
+                                isDismissible: false,
+                                minHeight: 0.3,
+                                maxHeight: 0.5,
+                                context: context,
+                                builder: (BuildContext context,
+                                    ScrollController scrollController,
+                                    double bottomSheetOffset) {
+                                  if (_latitude == null && _longitude == null) {
+                                    return OtherLocationScreen(
+                                        _getSelectedLocation, null, null);
+                                  } else {
+                                    return OtherLocationScreen(
+                                        _getSelectedLocation,
+                                        _latitude,
+                                        _longitude);
+                                  }
+                                },
+                              );
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.all(5.0),
+                              child: Text(
+                                'Save Other Location',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 15),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryColor),
+                  onPressed: () {
+                    if (_latitude!.isEmpty || _longitude == null) {
+                      Fluttertoast.showToast(
+                        msg: "Please select your location!",
+                        toastLength: Toast.LENGTH_LONG,
+                        gravity: ToastGravity.BOTTOM,
+                        timeInSecForIosWeb: 1,
+                      );
+                    } else if (_isEdit) {
+                      showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                                title: const Text('Update Ad'),
+                                content: const Text(
+                                    'Are you sure you want to Update your Ad?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      _updateAd();
+                                    },
+                                    child: const Text('Update'),
+                                  ),
+                                ],
+                              ));
+                    } else {
+                      _postAd();
+                    }
+                  },
+                  child: Text(
+                    _isEdit ? 'Update Ad' : 'Post Ad',
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                if (_isEdit)
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor),
+                    onPressed: () => showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Are you sure?'),
+                        content: const Text(
+                            'This action will permanently delete this Ad'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _deleteAd();
+                            },
+                            child: const Text('Delete'),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 15),
-                    Row(
-                      children: [
-                        Flexible(
-                          fit: FlexFit.tight,
-                          child: FractionallySizedBox(
-                            widthFactor: 1,
-                            child: Center(
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primaryColor,
-                                ),
-                                onPressed: _getCurrentLocation,
-                                child: const Padding(
-                                  padding: EdgeInsets.all(5.0),
-                                  child: Text(
-                                    'Save Current Location',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Flexible(
-                          fit: FlexFit.tight,
-                          child: FractionallySizedBox(
-                            widthFactor: 1,
-                            child: Center(
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primaryColor,
-                                ),
-                                onPressed: () {
-                                  FocusManager.instance.primaryFocus?.unfocus();
-                                  showFlexibleBottomSheet(
-                                    isDismissible: false,
-                                    minHeight: 0.3,
-                                    maxHeight: 0.5,
-                                    context: context,
-                                    builder: (BuildContext context,
-                                        ScrollController scrollController,
-                                        double bottomSheetOffset) {
-                                      if (_latitude == null &&
-                                          _longitude == null) {
-                                        return OtherLocationScreen(
-                                            _getSelectedLocation, null, null);
-                                      } else {
-                                        return OtherLocationScreen(
-                                            _getSelectedLocation,
-                                            _latitude,
-                                            _longitude);
-                                      }
-                                    },
-                                  );
-                                },
-                                child: const Padding(
-                                  padding: EdgeInsets.all(5.0),
-                                  child: Text(
-                                    'Save Other Location',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: const Text(
+                      'Delete Ad',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 15),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryColor),
-                      onPressed: () {
-                        if (_latitude!.isEmpty || _longitude == null) {
-                          Fluttertoast.showToast(
-                            msg: "Please select your location!",
-                            toastLength: Toast.LENGTH_LONG,
-                            gravity: ToastGravity.BOTTOM,
-                            timeInSecForIosWeb: 1,
-                          );
-                        }
-                        else if (_isEdit) {
-                          showDialog<bool>(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                    title: const Text('Update Ad'),
-                                    content: const Text(
-                                        'Are you sure you want to Update your Ad?'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, false),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.pop(context);
-                                          _updateAd();
-                                        },
-                                        child: const Text('Update'),
-                                      ),
-                                    ],
-                                  ));
-                        } else {
-                          _postAd();
-                        }
-                      },
-                      child: Text(
-                        _isEdit ? 'Update Ad' : 'Post Ad',
-                        style: const TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-                    if (_isEdit)
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryColor),
-                        onPressed: () => showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Are you sure?'),
-                            content: const Text(
-                                'This action will permanently delete this Ad'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                  _deleteAd();
-                                },
-                                child: const Text('Delete'),
-                              ),
-                            ],
-                          ),
-                        ),
-                        child: const Text(
-                          'Delete Ad',
-                          style: TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    const SizedBox(height: 10),
-                    const Text("Fields with * are compulsory",
-                        style: TextStyle(color: Colors.grey)),
-                  ],
+                  ),
+                const SizedBox(height: 10),
+                const Text("Fields with * are compulsory",
+                    style: TextStyle(color: Colors.grey)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: _isLoading ? false : true,
+      child: Stack(
+        children: [
+          Scaffold(
+            appBar: AppBar(
+                backgroundColor: AppColors.primaryColor,
+                title: Text(
+                  _isEdit ? 'Edit Your Ad' : 'Post Your Ad',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
                 ),
-              ),
-            )),
+                iconTheme: const IconThemeData(
+                  color: Colors.white,
+                )),
+            body: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                if (constraints.maxWidth < 600) {
+                  // For smaller screens (phones)
+                  return _buildPhoneLayout();
+                } else {
+                  // For larger screens (tablets, web)
+                  return _buildTabletAndWebLayout(constraints.maxWidth);
+                }
+              },
+            ),
           ),
           if (_isLoading)
             Positioned.fill(

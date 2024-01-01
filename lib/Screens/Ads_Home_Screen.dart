@@ -10,12 +10,12 @@ class AdsScreen extends StatefulWidget {
 }
 
 class _AdsScreenState extends State<AdsScreen> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _fireStore = FirebaseFirestore.instance;
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: _firestore
+      stream: _fireStore
           .collection('ads')
           .orderBy("timestamp", descending: true)
           .snapshots(),
@@ -23,13 +23,10 @@ class _AdsScreenState extends State<AdsScreen> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return const Center(child: Text('No ads found.'));
         }
-
         final ads = snapshot.data!.docs;
-
         return ListView.builder(
           itemCount: ads.length,
           itemBuilder: (context, index) {
@@ -44,7 +41,7 @@ class _AdsScreenState extends State<AdsScreen> {
                 } else {
                   // For larger screens (tablets, web)
                   return Center(
-                      child: Container(
+                      child: SizedBox(
                           width: constraints.maxWidth / 2,
                           child: AdHomeScreen(adData: adData, adId: adId)));
                 }

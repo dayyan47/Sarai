@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -35,6 +37,8 @@ class _EditProfileState extends State<EditProfile> {
   String? profileImageUrl;
   String? oldPassword;
   String? newPassword;
+  Uint8List? _imageBytes;
+  String? downloadUrl;
 
   DateTime _selectedDate = DateTime.now();
   bool _isOldVisible = true;
@@ -192,24 +196,39 @@ class _EditProfileState extends State<EditProfile> {
           'date_of_birth': _dobController.text,
         });
 
-        if (newProfileImage != null) {
-          if (profileImageUrl != null && profileImageUrl != "") {
-            await _storage
-                .refFromURL(profileImageUrl!)
-                .delete(); // delete old profile picture
-          }
-          String imageName = '${DateTime.now()}.jpg';
-          final storageRef =
-              _storage.ref().child('profile_images/${user?.uid}/$imageName');
-          final UploadTask uploadTask = storageRef.putFile(newProfileImage!);
-          final TaskSnapshot snapshot =
-              await uploadTask.whenComplete(() => null);
+        if (kIsWeb) {
+          if (_imageBytes!.isNotEmpty) {
+            if (profileImageUrl != "") {
+              await _storage
+                  .refFromURL(profileImageUrl!)
+                  .delete(); // delete old profile picture
+            }
+            await _uploadImageWeb();
 
-          if (snapshot.state == TaskState.success) {
-            final String downloadUrl = await storageRef.getDownloadURL();
             await userDoc.update({
               'profile_image_url': downloadUrl,
             });
+          }
+        } else {
+          if (newProfileImage != null) {
+            if (profileImageUrl != null && profileImageUrl != "") {
+              await _storage
+                  .refFromURL(profileImageUrl!)
+                  .delete(); // delete old profile picture
+            }
+            String imageName = '${DateTime.now()}.jpg';
+            final storageRef =
+                _storage.ref().child('profile_images/${user?.uid}/$imageName');
+            final UploadTask uploadTask = storageRef.putFile(newProfileImage!);
+            final TaskSnapshot snapshot =
+                await uploadTask.whenComplete(() => null);
+
+            if (snapshot.state == TaskState.success) {
+              downloadUrl = await storageRef.getDownloadURL();
+              await userDoc.update({
+                'profile_image_url': downloadUrl,
+              });
+            }
           }
         }
         Fluttertoast.showToast(
@@ -237,6 +256,498 @@ class _EditProfileState extends State<EditProfile> {
         Navigator.pop(context);
       }
     }
+  }
+
+  Future<void> _uploadImageWeb() async {
+    if (_imageBytes != null) {
+      String imageName = '${DateTime.now()}.jpg';
+      final storageRef =
+          _storage.ref().child('profile_images/${user?.uid}/$imageName');
+      await storageRef.putData(_imageBytes!);
+      downloadUrl = await storageRef.getDownloadURL();
+    }
+  }
+
+  void _openFileExplorer() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.image);
+    if (result != null) {
+      setState(() {
+        _imageBytes = result.files.single.bytes!;
+      });
+    }
+  }
+
+  Widget _buildPhoneLayout() {
+    return SingleChildScrollView(
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Stack(
+              children: [
+                SizedBox(
+                  width: 120,
+                  height: 120,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(100),
+                    child: newProfileImage != null
+                        ? Image.file(newProfileImage!)
+                        : profileImageUrl == ""
+                            ? const Icon(Icons.person_sharp,
+                                size: 100, color: AppColors.primaryColor)
+                            : CachedNetworkImage(
+                                placeholder: (context, url) => const Center(
+                                    child: CircularProgressIndicator()),
+                                imageUrl: profileImageUrl!,
+                                errorWidget: (context, url, error) =>
+                                    const Icon(Icons.error),
+                              ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: showOptions,
+                    child: Container(
+                      width: 35,
+                      height: 35,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(100),
+                        color: AppColors.primaryColor,
+                      ),
+                      child: const Icon(LineAwesomeIcons.camera_retro),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 25),
+            Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  TextFormField(
+                    controller: _fullNameController,
+                    keyboardType: TextInputType.text,
+                    decoration: const InputDecoration(
+                        label: Text('Full Name'),
+                        prefixIcon: Icon(LineAwesomeIcons.user)),
+                    validator: (value) {
+                      if (value!.isEmpty) {
+                        return 'Please enter your full name';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: _phoneNumController,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                        label: Text('Phone Number'),
+                        prefixIcon: Icon(LineAwesomeIcons.phone)),
+                    validator: (value) {
+                      if (value!.isEmpty) {
+                        return 'Please enter your Phone Number';
+                      } else if (!pakistanPhoneRegExp.hasMatch(value)) {
+                        return 'Please enter Valid Phone Number';
+                      } else {
+                        return null;
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: _dobController,
+                    keyboardType: TextInputType.none,
+                    readOnly: true,
+                    showCursor: false,
+                    decoration: const InputDecoration(
+                        label: Text('Date of Birth'),
+                        prefixIcon: Icon(LineAwesomeIcons.birthday_cake)),
+                    onTap: () => _selectDate(context),
+                    validator: (value) {
+                      if (value!.isEmpty) {
+                        return 'Please enter your date of birth';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    obscureText: _isOldVisible,
+                    decoration: InputDecoration(
+                        label: const Text('Enter Old Password'),
+                        prefixIcon: const Icon(Icons.fingerprint_sharp),
+                        suffixIcon: IconButton(
+                          icon: oldPasswordVisible,
+                          onPressed: () {
+                            setState(() {
+                              if (_isOldVisible == true) {
+                                _isOldVisible = false;
+                                oldPasswordVisible =
+                                    const Icon(LineAwesomeIcons.eye);
+                              } else if (_isOldVisible == false) {
+                                _isOldVisible = true;
+                                oldPasswordVisible =
+                                    const Icon(LineAwesomeIcons.eye_slash);
+                              }
+                            });
+                          },
+                        )),
+                    validator: (value) {
+                      if (value!.isEmpty) {
+                        return 'Please enter your old password';
+                      }
+                      return null;
+                    },
+                    onChanged: (value) {
+                      setState(() {
+                        oldPassword = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    obscureText: _isNewVisible,
+                    decoration: InputDecoration(
+                        label: const Text('Enter New Password'),
+                        prefixIcon: const Icon(Icons.fingerprint_sharp),
+                        suffixIcon: IconButton(
+                          icon: newPasswordVisible,
+                          onPressed: () {
+                            setState(() {
+                              if (_isNewVisible == true) {
+                                _isNewVisible = false;
+                                newPasswordVisible =
+                                    const Icon(LineAwesomeIcons.eye);
+                              } else if (_isNewVisible == false) {
+                                _isNewVisible = true;
+                                newPasswordVisible =
+                                    const Icon(LineAwesomeIcons.eye_slash);
+                              }
+                            });
+                          },
+                        )),
+                    validator: (value) {
+                      if (value!.isEmpty) {
+                        return 'Please enter your new password';
+                      }
+                      // if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                      //   return 'Password must contain at least 1 capital letter';
+                      // }
+                      // if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]')
+                      //     .hasMatch(value)) {
+                      //   return 'Password must contain at least 1 special character';
+                      // }
+                      // if (!RegExp(r'[0-9]').hasMatch(value)) {
+                      //   return 'Password must contain at least 1 numeric character';
+                      // }
+                      if (value.length < 8) {
+                        return 'Password must be at least 8 characters long';
+                      }
+                      return null;
+                    },
+                    onChanged: (value) {
+                      setState(() {
+                        newPassword = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _updateUserData,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                        side: BorderSide.none,
+                        shape: const StadiumBorder(),
+                      ),
+                      child: const Text(
+                        'Update',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text.rich(
+                        TextSpan(
+                            text: 'Joined Date: ',
+                            style: const TextStyle(color: Colors.grey),
+                            children: [
+                              TextSpan(
+                                text: user != null
+                                    ? DateFormat('dd/MM/yyyy')
+                                        .format(user!.metadata.creationTime!)
+                                    : 'N/A',
+                              )
+                            ]),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabletAndWebLayout(double width) {
+    return SingleChildScrollView(
+      child: Center(
+        child: Container(
+          width: width / 2,
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Stack(
+                children: [
+                  SizedBox(
+                    width: 120,
+                    height: 120,
+                    child: ClipRRect(
+                        borderRadius: BorderRadius.circular(100),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(100),
+                          child: _imageBytes != null
+                              ? Image.memory(_imageBytes!)
+                              : profileImageUrl != ""
+                                  ? CachedNetworkImage(
+                                      placeholder: (context, url) =>
+                                          const Center(
+                                              child:
+                                                  CircularProgressIndicator()),
+                                      imageUrl: profileImageUrl!,
+                                      errorWidget: (context, url, error) =>
+                                          const Icon(Icons.error),
+                                    )
+                                  : const Icon(Icons.person_sharp,
+                                      size: 100, color: AppColors.primaryColor),
+                        )
+
+                        // child: profileImageUrl == ""
+                        //         ? const Icon(Icons.person_sharp,
+                        //             size: 100, color: AppColors.primaryColor)
+                        //         : CachedNetworkImage(
+                        //             placeholder: (context, url) => const Center(
+                        //                 child: CircularProgressIndicator()),
+                        //             imageUrl: profileImageUrl!,
+                        //             errorWidget: (context, url, error) =>
+                        //                 const Icon(Icons.error),
+                        //           ),
+                        ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: _openFileExplorer,
+                      child: Container(
+                        width: 35,
+                        height: 35,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(100),
+                          color: AppColors.primaryColor,
+                        ),
+                        child: const Icon(LineAwesomeIcons.camera_retro),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 25),
+              Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    TextFormField(
+                      controller: _fullNameController,
+                      keyboardType: TextInputType.text,
+                      decoration: const InputDecoration(
+                          label: Text('Full Name'),
+                          prefixIcon: Icon(LineAwesomeIcons.user)),
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return 'Please enter your full name';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _phoneNumController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                          label: Text('Phone Number'),
+                          prefixIcon: Icon(LineAwesomeIcons.phone)),
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return 'Please enter your Phone Number';
+                        } else if (!pakistanPhoneRegExp.hasMatch(value)) {
+                          return 'Please enter Valid Phone Number';
+                        } else {
+                          return null;
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _dobController,
+                      keyboardType: TextInputType.none,
+                      readOnly: true,
+                      showCursor: false,
+                      decoration: const InputDecoration(
+                          label: Text('Date of Birth'),
+                          prefixIcon: Icon(LineAwesomeIcons.birthday_cake)),
+                      onTap: () => _selectDate(context),
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return 'Please enter your date of birth';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      obscureText: _isOldVisible,
+                      decoration: InputDecoration(
+                          label: const Text('Enter Old Password'),
+                          prefixIcon: const Icon(Icons.fingerprint_sharp),
+                          suffixIcon: IconButton(
+                            icon: oldPasswordVisible,
+                            onPressed: () {
+                              setState(() {
+                                if (_isOldVisible == true) {
+                                  _isOldVisible = false;
+                                  oldPasswordVisible =
+                                      const Icon(LineAwesomeIcons.eye);
+                                } else if (_isOldVisible == false) {
+                                  _isOldVisible = true;
+                                  oldPasswordVisible =
+                                      const Icon(LineAwesomeIcons.eye_slash);
+                                }
+                              });
+                            },
+                          )),
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return 'Please enter your old password';
+                        }
+                        return null;
+                      },
+                      onChanged: (value) {
+                        setState(() {
+                          oldPassword = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      obscureText: _isNewVisible,
+                      decoration: InputDecoration(
+                          label: const Text('Enter New Password'),
+                          prefixIcon: const Icon(Icons.fingerprint_sharp),
+                          suffixIcon: IconButton(
+                            icon: newPasswordVisible,
+                            onPressed: () {
+                              setState(() {
+                                if (_isNewVisible == true) {
+                                  _isNewVisible = false;
+                                  newPasswordVisible =
+                                      const Icon(LineAwesomeIcons.eye);
+                                } else if (_isNewVisible == false) {
+                                  _isNewVisible = true;
+                                  newPasswordVisible =
+                                      const Icon(LineAwesomeIcons.eye_slash);
+                                }
+                              });
+                            },
+                          )),
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return 'Please enter your new password';
+                        }
+                        // if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                        //   return 'Password must contain at least 1 capital letter';
+                        // }
+                        // if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]')
+                        //     .hasMatch(value)) {
+                        //   return 'Password must contain at least 1 special character';
+                        // }
+                        // if (!RegExp(r'[0-9]').hasMatch(value)) {
+                        //   return 'Password must contain at least 1 numeric character';
+                        // }
+                        if (value.length < 8) {
+                          return 'Password must be at least 8 characters long';
+                        }
+                        return null;
+                      },
+                      onChanged: (value) {
+                        setState(() {
+                          newPassword = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _updateUserData,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
+                          side: BorderSide.none,
+                          shape: const StadiumBorder(),
+                        ),
+                        child: const Text(
+                          'Update',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text.rich(
+                          TextSpan(
+                              text: 'Joined Date: ',
+                              style: const TextStyle(color: Colors.grey),
+                              children: [
+                                TextSpan(
+                                  text: user != null
+                                      ? DateFormat('dd/MM/yyyy')
+                                          .format(user!.metadata.creationTime!)
+                                      : 'N/A',
+                                )
+                              ]),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // Future<void> _deleteUser() async {
@@ -272,254 +783,35 @@ class _EditProfileState extends State<EditProfile> {
       child: Stack(
         children: [
           Scaffold(
-            appBar: AppBar(
-              backgroundColor: AppColors.primaryColor,
-              title: const Text(
-                'Edit Profile',
-                style:
-                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-              iconTheme: const IconThemeData(color: Colors.white),
-              // actions: [
-              //   IconButton(
-              //   icon: Icon(
-              //     Icons.delete_forever,
-              //   ),
-              //   onPressed: _deleteUser,
-              // ),
-              //   SizedBox(width: 10)
-              // ],
-            ),
-            body: SingleChildScrollView(
-              child: Container(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Stack(
-                      children: [
-                        SizedBox(
-                          width: 120,
-                          height: 120,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(100),
-                            child: newProfileImage != null
-                                ? Image.file(newProfileImage!)
-                                : profileImageUrl == ""
-                                    ? const Icon(Icons.person_sharp,
-                                        size: 100,
-                                        color: AppColors.primaryColor)
-                                    : CachedNetworkImage(
-                                        placeholder: (context, url) =>
-                                            const Center(
-                                                child:
-                                                    CircularProgressIndicator()),
-                                        imageUrl: profileImageUrl!,
-                                        errorWidget: (context, url, error) =>
-                                            const Icon(Icons.error),
-                                      ),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: GestureDetector(
-                            onTap: showOptions,
-                            child: Container(
-                              width: 35,
-                              height: 35,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(100),
-                                color: AppColors.primaryColor,
-                              ),
-                              child: const Icon(LineAwesomeIcons.camera_retro),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 25),
-                    Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          TextFormField(
-                            controller: _fullNameController,
-                            keyboardType: TextInputType.text,
-                            decoration: const InputDecoration(
-                                label: Text('Full Name'),
-                                prefixIcon: Icon(LineAwesomeIcons.user)),
-                            validator: (value) {
-                              if (value!.isEmpty) {
-                                return 'Please enter your full name';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 10),
-                          TextFormField(
-                            controller: _phoneNumController,
-                            keyboardType: TextInputType.phone,
-                            decoration: const InputDecoration(
-                                label: Text('Phone Number'),
-                                prefixIcon: Icon(LineAwesomeIcons.phone)),
-                            validator: (value) {
-                              if (value!.isEmpty) {
-                                return 'Please enter your Phone Number';
-                              } else if (!pakistanPhoneRegExp.hasMatch(value)) {
-                                return 'Please enter Valid Phone Number';
-                              } else {
-                                return null;
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 10),
-                          TextFormField(
-                            controller: _dobController,
-                            keyboardType: TextInputType.none,
-                            readOnly: true,
-                            showCursor: false,
-                            decoration: const InputDecoration(
-                                label: Text('Date of Birth'),
-                                prefixIcon:
-                                    Icon(LineAwesomeIcons.birthday_cake)),
-                            onTap: () => _selectDate(context),
-                            validator: (value) {
-                              if (value!.isEmpty) {
-                                return 'Please enter your date of birth';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 10),
-                          TextFormField(
-                            obscureText: _isOldVisible,
-                            decoration: InputDecoration(
-                                label: const Text('Enter Old Password'),
-                                prefixIcon: const Icon(Icons.fingerprint_sharp),
-                                suffixIcon: IconButton(
-                                  icon: oldPasswordVisible,
-                                  onPressed: () {
-                                    setState(() {
-                                      if (_isOldVisible == true) {
-                                        _isOldVisible = false;
-                                        oldPasswordVisible =
-                                            const Icon(LineAwesomeIcons.eye);
-                                      } else if (_isOldVisible == false) {
-                                        _isOldVisible = true;
-                                        oldPasswordVisible = const Icon(
-                                            LineAwesomeIcons.eye_slash);
-                                      }
-                                    });
-                                  },
-                                )),
-                            validator: (value) {
-                              if (value!.isEmpty) {
-                                return 'Please enter your old password';
-                              }
-                              return null;
-                            },
-                            onChanged: (value) {
-                              setState(() {
-                                oldPassword = value;
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 10),
-                          TextFormField(
-                            obscureText: _isNewVisible,
-                            decoration: InputDecoration(
-                                label: const Text('Enter New Password'),
-                                prefixIcon: const Icon(Icons.fingerprint_sharp),
-                                suffixIcon: IconButton(
-                                  icon: newPasswordVisible,
-                                  onPressed: () {
-                                    setState(() {
-                                      if (_isNewVisible == true) {
-                                        _isNewVisible = false;
-                                        newPasswordVisible =
-                                            const Icon(LineAwesomeIcons.eye);
-                                      } else if (_isNewVisible == false) {
-                                        _isNewVisible = true;
-                                        newPasswordVisible = const Icon(
-                                            LineAwesomeIcons.eye_slash);
-                                      }
-                                    });
-                                  },
-                                )),
-                            validator: (value) {
-                              if (value!.isEmpty) {
-                                return 'Please enter your new password';
-                              }
-                              // if (!RegExp(r'[A-Z]').hasMatch(value)) {
-                              //   return 'Password must contain at least 1 capital letter';
-                              // }
-                              // if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]')
-                              //     .hasMatch(value)) {
-                              //   return 'Password must contain at least 1 special character';
-                              // }
-                              // if (!RegExp(r'[0-9]').hasMatch(value)) {
-                              //   return 'Password must contain at least 1 numeric character';
-                              // }
-                              if (value.length < 8) {
-                                return 'Password must be at least 8 characters long';
-                              }
-                              return null;
-                            },
-                            onChanged: (value) {
-                              setState(() {
-                                newPassword = value;
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 10),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: _updateUserData,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primaryColor,
-                                side: BorderSide.none,
-                                shape: const StadiumBorder(),
-                              ),
-                              child: const Text(
-                                'Update',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text.rich(
-                                TextSpan(
-                                    text: 'Joined Date: ',
-                                    style: const TextStyle(color: Colors.grey),
-                                    children: [
-                                      TextSpan(
-                                        text: user != null
-                                            ? DateFormat('dd/MM/yyyy').format(
-                                                user!.metadata.creationTime!)
-                                            : 'N/A',
-                                      )
-                                    ]),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    )
-                  ],
+              appBar: AppBar(
+                backgroundColor: AppColors.primaryColor,
+                title: const Text(
+                  'Edit Profile',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
                 ),
+                iconTheme: const IconThemeData(color: Colors.white),
+                // actions: [
+                //   IconButton(
+                //   icon: Icon(
+                //     Icons.delete_forever,
+                //   ),
+                //   onPressed: _deleteUser,
+                // ),
+                //   SizedBox(width: 10)
+                // ],
               ),
-            ),
-          ),
+              body: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  if (constraints.maxWidth < 600) {
+                    // For smaller screens (phones)
+                    return _buildPhoneLayout();
+                  } else {
+                    // For larger screens (tablets, web)
+                    return _buildTabletAndWebLayout(constraints.maxWidth);
+                  }
+                },
+              )),
           if (_isLoading)
             Positioned.fill(
                 child: Container(

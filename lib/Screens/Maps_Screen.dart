@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:hostel_add/resources/values/colors.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class MapViewScreen extends StatefulWidget {
@@ -13,20 +16,10 @@ class MapViewScreen extends StatefulWidget {
 
 class _MapViewScreenState extends State<MapViewScreen> {
   final FirebaseFirestore fireStore = FirebaseFirestore.instance;
-  final Completer<GoogleMapController> _controller = Completer();
+  GoogleMapController? _controller;
   static const CameraPosition _kGoogle =
       CameraPosition(target: LatLng(31.582045, 74.329376), zoom: 10);
   Set<Marker> markers = {};
-
-  @override
-  initState() {
-    super.initState();
-    _requestPermission();
-  }
-
-  Future<void> _requestPermission() async {
-    await [Permission.location].request();
-  }
 
   Set<Marker> _buildMarkers(
       List<QueryDocumentSnapshot<Map<String, dynamic>>> allAds) {
@@ -55,6 +48,53 @@ class _MapViewScreenState extends State<MapViewScreen> {
     return markers;
   }
 
+  Future<void> _getCurrentLocation() async {
+    await [Permission.location].request();
+    bool isLocationPermissionGranted = await Permission.location.isGranted;
+    if (isLocationPermissionGranted) {
+      try {
+        Position position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high);
+        // Animate the map to the user's current position
+
+        if (_controller != null) {
+          setState(() {
+            _controller!.animateCamera(
+              CameraUpdate.newCameraPosition(
+                CameraPosition(
+                  target: LatLng(position.latitude, position.longitude),
+                  zoom: 15.0,
+                ),
+              ),
+            );
+          });
+
+
+          setState(() {
+            markers.add(
+              Marker(
+                markerId: MarkerId('UserLocation'),
+                position: LatLng(position.latitude, position.longitude),
+                // Add more marker properties as needed
+              ),
+            );
+          });
+        }
+      } catch (e) {
+        print('Error getting current location: $e');
+      }
+    } else {
+      Fluttertoast.showToast(
+          msg: "Please grant Location permission first!",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 2,
+          textColor: Colors.white,
+          fontSize: 10.0);
+      openAppSettings();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
@@ -73,13 +113,13 @@ class _MapViewScreenState extends State<MapViewScreen> {
                   child: GoogleMap(
                     padding: const EdgeInsets.only(top: 30.0),
                     myLocationEnabled: true,
-                    myLocationButtonEnabled: true,
+                    myLocationButtonEnabled: false,
                     zoomControlsEnabled: true,
                     initialCameraPosition: _kGoogle,
                     markers: markers,
                     mapType: MapType.terrain,
                     onMapCreated: (GoogleMapController controller) {
-                      _controller.complete(controller);
+                      _controller = controller;
                     },
                   )),
               Positioned.fill(
@@ -94,7 +134,24 @@ class _MapViewScreenState extends State<MapViewScreen> {
                             fontSize: 17, fontWeight: FontWeight.bold),
                       )),
                 ),
-              )
+              ),
+              Positioned(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ElevatedButton(
+                      onPressed: () async { await _getCurrentLocation();},
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor),
+                      child: const Text("Current Location",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ),
+              ),
             ],
           );
         });
