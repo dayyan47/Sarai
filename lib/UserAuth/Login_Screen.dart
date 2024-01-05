@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hostel_add/UserAuth/Email_Verification.dart';
@@ -16,7 +17,7 @@ class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  _LoginScreenState createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
@@ -28,7 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   String _email = '';
   String _password = '';
-  Icon passwordVisible = const Icon(LineAwesomeIcons.eye_slash);
+  Icon _passwordVisible = const Icon(LineAwesomeIcons.eye_slash);
 
   @override
   void initState() {
@@ -51,7 +52,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _signInWithEmailAndPassword() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-
     FocusManager.instance.primaryFocus?.unfocus();
     if (_formKey.currentState!.validate()) {
       _formKey.currentState?.save();
@@ -142,8 +142,6 @@ class _LoginScreenState extends State<LoginScreen> {
       if (currentUser != null) {
         await currentUser.delete();
         print("User deleted successfully!");
-
-        //To Do: delete all ads of this user too?
       } else {
         print("No user is currently signed in.");
       }
@@ -155,359 +153,261 @@ class _LoginScreenState extends State<LoginScreen> {
   void _launchWhatsapp() async {
     String phoneNumber = '+923032777297';
     String message = 'Hi guys, I need your help!';
-    String whatsappUrl =
-        'https://wa.me/$phoneNumber/?text=${Uri.parse(message)}';
-    if (!await canLaunchUrl(Uri.parse(whatsappUrl))) {
-      await launchUrl(Uri.parse(whatsappUrl));
+    String whatsappUrl = 'https://wa.me/$phoneNumber/?text=$message';
+    if (kIsWeb) {
+      if (await canLaunchUrl(Uri.parse(whatsappUrl))) {
+        await launchUrl(Uri.parse(whatsappUrl));
+      } else {
+        print("Can't open WhatsApp on web.");
+        Fluttertoast.showToast(
+            msg: "Can't open WhatsApp on Web",
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 2,
+            textColor: Colors.white,
+            fontSize: 10.0);
+      }
     } else {
-      print("Can't open WhatsApp.");
+      if (!await canLaunchUrl(Uri.parse(whatsappUrl))) {
+        await launchUrl(Uri.parse(whatsappUrl));
+      } else {
+        print("Can't open WhatsApp on Mobile.");
+        Fluttertoast.showToast(
+            msg: "Can't open WhatsApp on Mobile",
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 2,
+            textColor: Colors.white,
+            fontSize: 10.0);
+      }
     }
   }
 
-  void showWebDialog()
-  {
-    AlertDialog alert = const AlertDialog(
-      title: Text("Contact Us"),
-      content:
-      Text("Please contact us on whatsapp on the following number: 0303-2777297"),
-      actions: [
-      ],
-    );
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return alert;
-      },
-    );
-  }
-
-  Widget _buildPhoneLayout() {
-    return SingleChildScrollView(
-      child: Container(
-        //width: MediaQuery.of(context).size.width,
-        //height: MediaQuery.of(context).size.height,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.fromLTRB(15.0, 50.0, 15.0, 15.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Card(
-                elevation: 10,
-                color: Colors.white,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                      15.0, 30.0, 15.0, 30.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Image.asset('assets/SaraiLogo.png',
-                              height: 150, fit: BoxFit.contain)
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      TextFormField(
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (value!.isEmpty) {
-                            return 'Please Enter Email';
-                          }
-                          return null;
-                        },
-                        onSaved: (value) => _email = value!,
-                      ),
-                      const SizedBox(height: 10),
-                      TextFormField(
-                        decoration: InputDecoration(
-                            label: const Text('Password'),
-                            suffixIcon: IconButton(
-                              icon: passwordVisible,
-                              onPressed: () {
-                                setState(() {
-                                  if (_isPasswordVisible == true) {
-                                    _isPasswordVisible = false;
-                                    passwordVisible = const Icon(
-                                        LineAwesomeIcons.eye);
-                                  } else if (_isPasswordVisible ==
-                                      false) {
-                                    _isPasswordVisible = true;
-                                    passwordVisible = const Icon(
-                                        LineAwesomeIcons.eye_slash);
-                                  }
-                                });
-                              },
-                            )),
-                        obscureText: _isPasswordVisible,
-                        validator: (value) {
-                          if (value!.isEmpty) {
-                            return 'Please Enter Password!!';
-                          }
-                          return null;
-                        },
-                        onSaved: (value) => _password = value!,
-                      ),
-                      const SizedBox(height: 10),
-                      Container(
-                        width: MediaQuery.of(context).size.width,
-                        height: 35,
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          child: const Text(
-                            'Forgot Password?',
-                            style: TextStyle(
-                                color: AppColors.primaryColor),
-                          ),
-                          onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) =>
-                                  const ResetPasswordScreen())),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                              AppColors.primaryColor),
-                          onPressed: _signInWithEmailAndPassword,
-                          child: const Text('Login',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18))),
-                      const SizedBox(height: 5),
-                      TextButton(
-                        onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) =>
-                                const SignUpScreen())),
-                        child: const Text(
-                          "Don't have an account? Sign up here",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              color: AppColors.primaryColor),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: _launchWhatsapp,
-                        child: const Text(
-                          "Having problem Logging In, Contact Support on WhatsApp",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              color: AppColors.primaryColor),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabletAndWebLayout(double width) {
-    return SingleChildScrollView(
-      child: Center(
-        child: Container(
-          width: width/2,
-          alignment: Alignment.center,
-          padding: const EdgeInsets.fromLTRB(15.0, 50.0, 15.0, 15.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Card(
-                  elevation: 10,
-                  color: Colors.white,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                        15.0, 30.0, 15.0, 30.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Image.asset('assets/SaraiLogo.png',
-                                height: 150, fit: BoxFit.contain)
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        TextFormField(
-                          decoration: const InputDecoration(
-                            labelText: 'Email',
-                          ),
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) {
-                            if (value!.isEmpty) {
-                              return 'Please Enter Email';
-                            }
-                            return null;
-                          },
-                          onSaved: (value) => _email = value!,
-                        ),
-                        const SizedBox(height: 10),
-                        TextFormField(
-                          decoration: InputDecoration(
-                              label: const Text('Password'),
-                              suffixIcon: IconButton(
-                                icon: passwordVisible,
-                                onPressed: () {
-                                  setState(() {
-                                    if (_isPasswordVisible == true) {
-                                      _isPasswordVisible = false;
-                                      passwordVisible = const Icon(
-                                          LineAwesomeIcons.eye);
-                                    } else if (_isPasswordVisible ==
-                                        false) {
-                                      _isPasswordVisible = true;
-                                      passwordVisible = const Icon(
-                                          LineAwesomeIcons.eye_slash);
-                                    }
-                                  });
-                                },
-                              )),
-                          obscureText: _isPasswordVisible,
-                          validator: (value) {
-                            if (value!.isEmpty) {
-                              return 'Please Enter Password!!';
-                            }
-                            return null;
-                          },
-                          onSaved: (value) => _password = value!,
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          width: width,
-                          height: 35,
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            child: const Text(
-                              'Forgot Password?',
-                              style: TextStyle(
-                                  color: AppColors.primaryColor),
-                            ),
-                            onPressed: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                    const ResetPasswordScreen())),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                AppColors.primaryColor),
-                            onPressed: _signInWithEmailAndPassword,
-                            child: const Text('Login',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18))),
-                        const SizedBox(height: 5),
-                        TextButton(
-                          onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) =>
-                                  const SignUpScreen())),
-                          child: const Text(
-                            "Don't have an account? Sign up here",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                color: AppColors.primaryColor),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: showWebDialog,
-                          child: const Text(
-                            "Having problem Logging In, Contact Support on WhatsApp",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                color: AppColors.primaryColor),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-  }
+  // void _showContactUsDialogWeb() {
+  //   Widget closeButton = TextButton(
+  //     child: const Text("Close"),
+  //     onPressed: () {
+  //       Navigator.pop(context);
+  //     },
+  //   );
+  //
+  //   AlertDialog alert = AlertDialog(
+  //     title: const Text("Contact Us"),
+  //     content: const Text(
+  //         "Please contact us on WhatsApp on the following number: 0303-2777297"),
+  //     actions: [closeButton],
+  //   );
+  //
+  //   showDialog(
+  //     context: context,
+  //     builder: (BuildContext context) {
+  //       return alert;
+  //     },
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: _isLoading ? false : true,
-      child: Stack(
-        children: [
+        canPop: _isLoading ? false : true,
+        child: Stack(children: [
           Scaffold(
               appBar: AppBar(
                 backgroundColor: AppColors.primaryColor,
                 title: const Center(
-                    child: Text(
-                  'SARAI',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
-                )),
+                    child: Text('SARAI',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold))),
                 automaticallyImplyLeading: false,
               ),
               body: LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) {
-                  if (constraints.maxWidth < 600) {
-                    // For smaller screens (phones)
-                    return _buildPhoneLayout();
-                  } else {
-                    // For larger screens (tablets, web)
-                    return _buildTabletAndWebLayout(constraints.maxWidth);
-                  }
-                },
-              )),
+                  builder: (BuildContext context, BoxConstraints constraints) {
+                return SingleChildScrollView(
+                    child: Center(
+                        child: Container(
+                            width: constraints.maxWidth >= 600
+                                ? constraints.maxWidth / 2
+                                : constraints.maxWidth,
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.fromLTRB(
+                                15.0, 50.0, 15.0, 15.0),
+                            child: Form(
+                                key: _formKey,
+                                child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    children: [
+                                      Card(
+                                          elevation: 10,
+                                          color: Colors.white,
+                                          child: Padding(
+                                              padding:
+                                                  const EdgeInsets.fromLTRB(
+                                                      15.0, 30.0, 15.0, 30.0),
+                                              child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.start,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment
+                                                          .stretch,
+                                                  children: [
+                                                    Row(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .center,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .center,
+                                                        children: [
+                                                          Image.asset(
+                                                              'assets/SaraiLogo.png',
+                                                              height: 150,
+                                                              fit: BoxFit
+                                                                  .contain)
+                                                        ]),
+                                                    const SizedBox(height: 10),
+                                                    TextFormField(
+                                                        decoration:
+                                                            const InputDecoration(
+                                                                labelText:
+                                                                    'Email'),
+                                                        keyboardType:
+                                                            TextInputType
+                                                                .emailAddress,
+                                                        validator: (value) {
+                                                          if (value!.isEmpty) {
+                                                            return 'Please Enter Email';
+                                                          }
+                                                          return null;
+                                                        },
+                                                        onSaved: (value) =>
+                                                            _email = value!),
+                                                    const SizedBox(height: 10),
+                                                    TextFormField(
+                                                      decoration:
+                                                          InputDecoration(
+                                                              label: const Text(
+                                                                  'Password'),
+                                                              suffixIcon:
+                                                                  IconButton(
+                                                                      icon:
+                                                                          _passwordVisible,
+                                                                      onPressed:
+                                                                          () {
+                                                                        setState(
+                                                                            () {
+                                                                          if (_isPasswordVisible ==
+                                                                              true) {
+                                                                            _isPasswordVisible =
+                                                                                false;
+                                                                            _passwordVisible =
+                                                                                const Icon(LineAwesomeIcons.eye);
+                                                                          } else if (_isPasswordVisible ==
+                                                                              false) {
+                                                                            _isPasswordVisible =
+                                                                                true;
+                                                                            _passwordVisible =
+                                                                                const Icon(LineAwesomeIcons.eye_slash);
+                                                                          }
+                                                                        });
+                                                                      })),
+                                                      obscureText:
+                                                          _isPasswordVisible,
+                                                      validator: (value) {
+                                                        if (value!.isEmpty) {
+                                                          return 'Please Enter Password!!';
+                                                        }
+                                                        return null;
+                                                      },
+                                                      onSaved: (value) =>
+                                                          _password = value!,
+                                                    ),
+                                                    const SizedBox(height: 10),
+                                                    Container(
+                                                        width: MediaQuery.of(
+                                                                context)
+                                                            .size
+                                                            .width,
+                                                        height: 35,
+                                                        alignment: Alignment
+                                                            .centerRight,
+                                                        child: TextButton(
+                                                          child: const Text(
+                                                              'Forgot Password?',
+                                                              style: TextStyle(
+                                                                  color: AppColors
+                                                                      .primaryColor)),
+                                                          onPressed: () => Navigator.push(
+                                                              context,
+                                                              MaterialPageRoute(
+                                                                  builder:
+                                                                      (context) =>
+                                                                          const ResetPasswordScreen())),
+                                                        )),
+                                                    const SizedBox(height: 10),
+                                                    ElevatedButton(
+                                                        style: ElevatedButton
+                                                            .styleFrom(
+                                                                backgroundColor:
+                                                                    AppColors
+                                                                        .primaryColor),
+                                                        onPressed:
+                                                            _signInWithEmailAndPassword,
+                                                        child: const Text(
+                                                            'Login',
+                                                            style: TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                fontSize: 18))),
+                                                    const SizedBox(height: 5),
+                                                    TextButton(
+                                                        onPressed: () => Navigator.push(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                                builder:
+                                                                    (context) =>
+                                                                        const SignUpScreen())),
+                                                        child: const Text(
+                                                            "Don't have an account? Sign up here",
+                                                            textAlign: TextAlign
+                                                                .center,
+                                                            style: TextStyle(
+                                                                color: AppColors
+                                                                    .primaryColor))),
+                                                    TextButton(
+                                                        onPressed:
+                                                            _launchWhatsapp,
+                                                        child: const Text(
+                                                            "Having problem Logging In, Contact Support on WhatsApp",
+                                                            textAlign: TextAlign
+                                                                .center,
+                                                            style: TextStyle(
+                                                                color: AppColors
+                                                                    .primaryColor)))
+                                                  ])))
+                                    ])))));
+              })),
           if (_isLoading)
             Positioned.fill(
                 child: Container(
                     color: Colors.black.withOpacity(0.8),
                     child: const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        CupertinoActivityIndicator(
-                            radius: 25, color: AppColors.primaryColor),
-                        SizedBox(height: 10),
-                        Text("Loading...",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                                decoration: TextDecoration.none))
-                      ],
-                    )))
-        ],
-      ),
-    );
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          CupertinoActivityIndicator(
+                              radius: 25, color: AppColors.primaryColor),
+                          SizedBox(height: 10),
+                          Text("Loading...",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  decoration: TextDecoration.none))
+                        ])))
+        ]));
   }
 }

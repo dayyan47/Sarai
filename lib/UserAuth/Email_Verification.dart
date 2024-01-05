@@ -1,9 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:hostel_add/Screens/Home_Screen.dart';
 import 'package:hostel_add/resources/values/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../Screens/Home_Screen.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   const EmailVerificationScreen({super.key});
@@ -14,13 +14,13 @@ class EmailVerificationScreen extends StatefulWidget {
 }
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
-  User? user = FirebaseAuth.instance.currentUser;
+  final User? _user = FirebaseAuth.instance.currentUser;
 
   Future<void> _sendVerificationEmail() async {
-    await user?.reload();
-    if (user != null && !user!.emailVerified) {
+    await _user?.reload();
+    if (_user != null && !_user!.emailVerified) {
       try {
-        await user!.sendEmailVerification();
+        await _user!.sendEmailVerification();
         Fluttertoast.showToast(
             msg: 'Verification email sent. Please check your email.',
             toastLength: Toast.LENGTH_LONG,
@@ -73,120 +73,49 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     }
   }
 
-  Widget _buildPhoneLayout() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          if (user != null && !user!.emailVerified)
-            const Text('You need to verify your email address.',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          if (user != null && !user!.emailVerified)
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryColor,
-              ),
-              onPressed: _sendVerificationEmail,
-              child: const Text(
-                'Resend Verification Email',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          const SizedBox(height: 25),
-          const Text('Have you verified your email?',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryColor,
-            ),
-            onPressed: _checkEmailVerified,
-            child: const Text(
-              'Check Status',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTabletAndWebLayout(double width) {
-    return Center(
-      child: SizedBox(
-        width: width/2,
-        height: MediaQuery.sizeOf(context).height,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            if (user != null && !user!.emailVerified)
-              const Text('You need to verify your email address.',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            if (user != null && !user!.emailVerified)
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryColor,
-                ),
-                onPressed: _sendVerificationEmail,
-                child: const Text(
-                  'Resend Verification Email',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            const SizedBox(height: 25),
-            const Text('Have you verified your email?',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryColor,
-              ),
-              onPressed: _checkEmailVerified,
-              child: const Text(
-                'Check Status',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.primaryColor,
-        title: const Text('Email Verification',
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
+        appBar: AppBar(
+            backgroundColor: AppColors.primaryColor,
+            title: const Text('Email Verification',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: Colors.white)),
+            iconTheme: const IconThemeData(color: Colors.white)),
         body: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            if (constraints.maxWidth < 600) {
-              // For smaller screens (phones)
-              return _buildPhoneLayout();
-            } else {
-              // For larger screens (tablets, web)
-              return _buildTabletAndWebLayout(constraints.maxWidth);
-            }
-          },
-        )
-    );
+            builder: (BuildContext context, BoxConstraints constraints) {
+          return Center(
+              child: SizedBox(
+                  width: constraints.maxWidth >= 600
+                      ? constraints.maxWidth / 2
+                      : constraints.maxWidth,
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        const Text('You need to verify your email address.',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 10),
+                        ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryColor),
+                            onPressed: _sendVerificationEmail,
+                            child: const Text('Resend Verification Email',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold))),
+                        const SizedBox(height: 25),
+                        const Text('Have you verified your email?',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 10),
+                        ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryColor),
+                            onPressed: _checkEmailVerified,
+                            child: const Text('Check Status',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold)))
+                      ])));
+        }));
   }
 }

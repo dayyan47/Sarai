@@ -19,13 +19,6 @@ class _SplashScreenState extends State<SplashScreen> {
     _checkLogin();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-        child: CupertinoActivityIndicator(
-            radius: 25, color: AppColors.primaryColor));
-  }
-
   Future<void> _checkLogin() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     bool login = prefs.getBool('isLoggedIn') ?? false;
@@ -36,5 +29,12 @@ class _SplashScreenState extends State<SplashScreen> {
       Navigator.pushReplacement(context,
           MaterialPageRoute(builder: (context) => const LoginScreen()));
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+        child: CupertinoActivityIndicator(
+            radius: 25, color: AppColors.primaryColor));
   }
 }

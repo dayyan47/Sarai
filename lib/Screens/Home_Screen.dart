@@ -16,10 +16,10 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> {
   bool _showFab = true;
   int _selectedIndex = 0;
-  late List<Widget> screens = [
+  late final List<Widget> _screens = [
     const AdsScreen(),
     const MapViewScreen(),
     const ProfileScreen()
@@ -30,50 +30,42 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     Text('Map',
         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
     Text('Profile',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
   ];
 
   Widget _buildAppBarItemsForWeb() {
-    return Row(
-      children: <Widget>[
-        Padding(
+    return Row(children: <Widget>[
+      Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12.0),
           child: IconButton(
-            icon: Icon(Icons.home,
-                color: _selectedIndex == 0 ? Colors.white : Colors.grey),
-            onPressed: () {
-              setState(() {
-                _selectedIndex = 0;
-              });
-            },
-          ),
-        ),
-        Padding(
+              icon: Icon(Icons.home,
+                  color: _selectedIndex == 0 ? Colors.white : Colors.grey),
+              onPressed: () {
+                setState(() {
+                  _selectedIndex = 0;
+                });
+              })),
+      Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12.0),
           child: IconButton(
-            icon: Icon(Icons.map,
-                color: _selectedIndex == 1 ? Colors.white : Colors.grey),
-            onPressed: () {
-              setState(() {
-                _selectedIndex = 1;
-              });
-            },
-          ),
-        ),
-        Padding(
+              icon: Icon(Icons.map,
+                  color: _selectedIndex == 1 ? Colors.white : Colors.grey),
+              onPressed: () {
+                setState(() {
+                  _selectedIndex = 1;
+                });
+              })),
+      Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12.0),
           child: IconButton(
-            icon: Icon(Icons.person,
-                color: _selectedIndex == 2 ? Colors.white : Colors.grey),
-            onPressed: () {
-              setState(() {
-                _selectedIndex = 2;
-              });
-            },
-          ),
-        ),
-      ],
-    );
+              icon: Icon(Icons.person,
+                  color: _selectedIndex == 2 ? Colors.white : Colors.grey),
+              onPressed: () {
+                setState(() {
+                  _selectedIndex = 2;
+                });
+              }))
+    ]);
   }
 
   @override
@@ -85,8 +77,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         actions: isWeb
             ? [
                 _buildAppBarItemsForWeb(),
-                if (_selectedIndex == 0)
-                  IconButton(
+                IconButton(
                     icon:
                         const Icon(LineAwesomeIcons.heart, color: Colors.white),
                     onPressed: () {
@@ -94,28 +85,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           context,
                           MaterialPageRoute(
                               builder: (context) => const FavAdsScreen()));
-                    },
-                  ),
+                    }),
                 const SizedBox(width: 10)
               ]
             : _selectedIndex == 0
                 ? [
                     IconButton(
-                      icon: const Icon(LineAwesomeIcons.heart,
-                          color: Colors.white),
-                      onPressed: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const FavAdsScreen()));
-                      },
-                    ),
+                        icon: const Icon(LineAwesomeIcons.heart,
+                            color: Colors.white),
+                        onPressed: () {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const FavAdsScreen()));
+                        }),
                     const SizedBox(width: 10)
                   ]
                 : null,
         backgroundColor: AppColors.primaryColor,
         title: _pages[_selectedIndex],
-        centerTitle: !isWeb ? true : false,
+        centerTitle: isWeb ? false : true,
         automaticallyImplyLeading: false,
       ),
       body: NotificationListener<UserScrollNotification>(
@@ -130,25 +119,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             });
             return true;
           },
-          //child: screens[_selectedIndex]),
-          child: IndexedStack(index: _selectedIndex, children: screens)),
-      bottomNavigationBar: isWeb
-          ? null
-          : BottomNavigationBar(
+          //child: _screens[_selectedIndex]),
+          child: IndexedStack(index: _selectedIndex, children: _screens)),
+      bottomNavigationBar: !isWeb
+          ? BottomNavigationBar(
               onTap: (index) => setState(() {
-                _selectedIndex = index;
-              }),
+                    _selectedIndex = index;
+                  }),
               currentIndex: _selectedIndex,
               selectedItemColor: Colors.white,
               unselectedItemColor: Colors.black,
               backgroundColor: AppColors.primaryColor,
               items: const [
-                BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-                BottomNavigationBarItem(icon: Icon(Icons.map), label: "Map"),
-                BottomNavigationBarItem(
-                    icon: Icon(Icons.person), label: "Profile"),
-              ],
-            ),
+                  BottomNavigationBarItem(
+                      icon: Icon(Icons.home), label: "Home"),
+                  BottomNavigationBarItem(icon: Icon(Icons.map), label: "Map"),
+                  BottomNavigationBarItem(
+                      icon: Icon(Icons.person), label: "Profile")
+                ])
+          : null,
       floatingActionButton: _selectedIndex == 0
           ? AnimatedSlide(
               duration: duration,
@@ -167,15 +156,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     },
                     backgroundColor: AppColors.primaryColor,
                     label: const Row(children: [
-                      Text(
-                        "Post AD",
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                      Icon(
-                        Icons.add,
-                        color: Colors.white,
-                      )
+                      Text("Post AD",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
+                      Icon(Icons.add, color: Colors.white)
                     ]),
                   )))
           : null,

@@ -13,150 +13,79 @@ class MyAdsScreen extends StatefulWidget {
 }
 
 class _MyAdsScreenState extends State<MyAdsScreen> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final User? currentUser = FirebaseAuth.instance.currentUser;
-
-  Widget _buildPhoneLayout() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _firestore
-          .collection('ads')
-          .where('userId', isEqualTo: currentUser?.uid)
-          .snapshots(),
-      builder: (context, snapshot) {
-        List myAds = [];
-
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(
-            child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text("You haven't posted any ad yet!"),
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryColor),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                                  const PostEditAdScreen(adId: "Post Ad")),
-                        );
-                      },
-                      child: const Text('Start posting your first ad',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)))
-                ]),
-          );
-        }
-        if (snapshot.data != null) {
-          myAds = snapshot.data!.docs;
-          myAds.sort((a, b) {
-            Timestamp timestampA = a['timestamp'];
-            Timestamp timestampB = b['timestamp'];
-            return timestampB.compareTo(timestampA);
-          });
-        }
-
-        return ListView.builder(
-          itemCount: myAds.length,
-          itemBuilder: (context, index) {
-            final adData = myAds[index].data() as Map<String, dynamic>;
-            final adId = myAds[index].id;
-            return AdHomeScreen(adData: adData, adId: adId);
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildTabletAndWebLayout(double width) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _firestore
-          .collection('ads')
-          .where('userId', isEqualTo: currentUser?.uid)
-          .snapshots(),
-      builder: (context, snapshot) {
-        List myAds = [];
-
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(
-            child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text("You haven't posted any ad yet!"),
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryColor),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                                  const PostEditAdScreen(adId: "Post Ad")),
-                        );
-                      },
-                      child: const Text('Start posting your first ad',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)))
-                ]),
-          );
-        }
-        if (snapshot.data != null) {
-          myAds = snapshot.data!.docs;
-          myAds.sort((a, b) {
-            Timestamp timestampA = a['timestamp'];
-            Timestamp timestampB = b['timestamp'];
-            return timestampB.compareTo(timestampA);
-          });
-        }
-
-        return ListView.builder(
-          itemCount: myAds.length,
-          itemBuilder: (context, index) {
-            final adData = myAds[index].data() as Map<String, dynamic>;
-            final adId = myAds[index].id;
-            return Center(
-                child: Container(
-                    width: width / 2,
-                    child: AdHomeScreen(adData: adData, adId: adId)));
-          },
-        );
-      },
-    );
-  }
+  final FirebaseFirestore _fireStore = FirebaseFirestore.instance;
+  final User? _currentUser = FirebaseAuth.instance.currentUser;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.primaryColor,
-        title: const Text('My Ads',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          if (constraints.maxWidth < 600) {
-            // For smaller screens (phones)
-            return _buildPhoneLayout();
-          } else {
-            // For larger screens (tablets, web)
-            return _buildTabletAndWebLayout(constraints.maxWidth);
-          }
-        },
-      ),
-    );
+        appBar: AppBar(
+          backgroundColor: AppColors.primaryColor,
+          title: const Text('My Ads',
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+          return StreamBuilder<QuerySnapshot>(
+              stream: _fireStore
+                  .collection('ads')
+                  .where('userId', isEqualTo: _currentUser?.uid)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                List myAds = [];
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(
+                      child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                        const Text("You haven't posted any ad yet!"),
+                        const SizedBox(height: 10),
+                        ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryColor),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const PostEditAdScreen(
+                                            adId: "Post Ad")),
+                              );
+                            },
+                            child: const Text('Start posting your first ad',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold)))
+                      ]));
+                }
+                if (snapshot.data != null) {
+                  myAds = snapshot.data!.docs;
+                  myAds.sort((a, b) {
+                    Timestamp timestampA = a['timeStamp'];
+                    Timestamp timestampB = b['timeStamp'];
+                    return timestampB.compareTo(timestampA);
+                  });
+                }
+                return ListView.builder(
+                    itemCount: myAds.length,
+                    itemBuilder: (context, index) {
+                      final adData =
+                          myAds[index].data() as Map<String, dynamic>;
+                      final adId = myAds[index].id;
+                      return Center(
+                          child: SizedBox(
+                              width: constraints.maxWidth >= 600
+                                  ? constraints.maxWidth / 2
+                                  : constraints.maxWidth,
+                              child: AdHomeScreen(adData: adData, adId: adId)));
+                    });
+              });
+        }));
   }
 }
