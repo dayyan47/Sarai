@@ -191,54 +191,84 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
 
   void _showImageDialog(BuildContext context, List<dynamic> imageUrls) {
     int currentPage = 0;
+    PageController pageController = PageController(initialPage: currentPage);
     showDialog(
         context: context,
         builder: (BuildContext context) {
-          return Dialog(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.0)),
-              child: Stack(children: [
-                SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.8,
-                    height: MediaQuery.of(context).size.height * 0.8,
-                    child: PageView.builder(
-                        itemCount: imageUrls.length,
-                        controller: PageController(initialPage: currentPage),
-                        onPageChanged: (index) {
+          return StatefulBuilder(builder: (context, setState) {
+            return Dialog(
+                child: Stack(children: [
+              Container(
+                  width: MediaQuery.of(context).size.width * 0.8,
+                  height: MediaQuery.of(context).size.height * 0.8,
+                  padding: const EdgeInsets.all(15.0),
+                  child: PageView.builder(
+                      itemCount: imageUrls.length,
+                      controller: pageController,
+                      onPageChanged: (index) {
+                        setState(() {
                           currentPage = index;
-                        },
-                        itemBuilder: (context, index) {
-                          return Center(
-                              child: Stack(children: [
-                            CachedNetworkImage(
-                                imageUrl: imageUrls[index],
-                                placeholder: (context, url) => const Center(
-                                    child: CircularProgressIndicator()),
-                                errorWidget: (context, url, error) =>
-                                    const Icon(Icons.error),
-                                fit: BoxFit.cover),
-                            Container(
-                                padding: const EdgeInsets.all(8),
-                                color: Colors.black.withOpacity(0.7),
-                                child: Text('${index + 1}/${imageUrls.length}',
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold)))
-                          ]));
-                        })),
+                        });
+                      },
+                      itemBuilder: (context, index) {
+                        return Center(
+                          child: CachedNetworkImage(
+                              imageUrl: imageUrls[index],
+                              placeholder: (context, url) => const Center(
+                                  child: CircularProgressIndicator()),
+                              errorWidget: (context, url, error) =>
+                                  const Icon(Icons.error),
+                              fit: BoxFit.cover),
+                        );
+                      })),
+              Positioned(
+                  top: 10,
+                  left: 10,
+                  child: Container(
+                      padding: const EdgeInsets.all(8),
+                      color: Colors.black.withOpacity(0.7),
+                      child: Text('${currentPage + 1}/${imageUrls.length}',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)))),
+              Positioned(
+                  top: 10,
+                  right: 10,
+                  child: InkWell(
+                      onTap: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const CircleAvatar(
+                          backgroundColor: Colors.white,
+                          radius: 16,
+                          child: Icon(Icons.close,
+                              color: Colors.black, size: 20)))),
+              if (kIsWeb)
                 Positioned(
-                    top: 8,
+                    left: 8,
+                    top: MediaQuery.of(context).size.height * 0.8 / 2,
+                    child: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios),
+                        onPressed: () {
+                          if (currentPage > 0) {
+                            currentPage--;
+                            pageController.jumpToPage(currentPage);
+                          }
+                        })),
+              if (kIsWeb)
+                Positioned(
                     right: 8,
-                    child: InkWell(
-                        onTap: () {
-                          Navigator.of(context).pop();
-                        },
-                        child: const CircleAvatar(
-                            backgroundColor: Colors.white,
-                            radius: 16,
-                            child: Icon(Icons.close,
-                                color: Colors.black, size: 20))))
-              ]));
+                    top: MediaQuery.of(context).size.height * 0.8 / 2,
+                    child: IconButton(
+                        icon: const Icon(Icons.arrow_forward_ios),
+                        onPressed: () {
+                          if (currentPage < imageUrls.length - 1) {
+                            currentPage++;
+                            pageController.jumpToPage(currentPage);
+                          }
+                        }))
+            ]));
+          });
         });
   }
 

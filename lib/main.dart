@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:hostel_add/Screens/Splash_Screen.dart';
+import 'package:hostel_add/Widgets/MyCustomScrollBehavior.dart';
 import 'package:hostel_add/firebase_options.dart';
 import 'package:hostel_add/resources/values/colors.dart';
 
@@ -17,6 +18,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      scrollBehavior: MyCustomScrollBehaviour(),
       title: 'SARAI',
       theme: ThemeData(
         primaryColor: AppColors.primaryColor,

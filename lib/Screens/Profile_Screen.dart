@@ -22,13 +22,13 @@ class ProfileScreen extends StatefulWidget {
 
 class ProfileScreenState extends State<ProfileScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  DocumentReference? userDoc;
-  bool isLoggedIn = true;
+  DocumentReference? _userDoc;
+  bool _isLoggedIn = true;
 
   @override
   void initState() {
     super.initState();
-    userDoc = FirebaseFirestore.instance
+    _userDoc = FirebaseFirestore.instance
         .collection('users')
         .doc(_auth.currentUser?.uid);
   }
@@ -90,6 +90,80 @@ class ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _moveToLoginScreen() async {
+    _isLoggedIn = false;
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setBool('isLoggedIn', _isLoggedIn);
+    prefs.remove('isLoggedIn');
+
+    Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (Route<dynamic> r) => false);
+  }
+
+  void _logout(BuildContext context) async {
+    _isLoggedIn = false;
+    try {
+      await _auth.signOut();
+      Fluttertoast.showToast(
+          msg: "Logged Out Successfully!",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 2,
+          textColor: Colors.white,
+          fontSize: 10.0);
+
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setBool('isLoggedIn', _isLoggedIn);
+      prefs.remove('isLoggedIn');
+
+      Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (Route<dynamic> r) => false);
+    } catch (e) {
+      print('Error Signing Out: $e');
+      Fluttertoast.showToast(
+          msg: e.toString(),
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 2,
+          textColor: Colors.white,
+          fontSize: 10.0);
+    }
+  }
+
+  // Future<void> _deleteUser(User? currentUser) async {
+  //   try {
+  //     if (currentUser != null) {
+  //       await currentUser.delete();
+  //       Fluttertoast.showToast(
+  //           msg: "Account deleted successfully!",
+  //           toastLength: Toast.LENGTH_LONG,
+  //           gravity: ToastGravity.BOTTOM,
+  //           timeInSecForIosWeb: 2,
+  //           textColor: Colors.white,
+  //           fontSize: 10.0);
+  //
+  //       print("User deleted successfully.");
+  //       SharedPreferences prefs = await SharedPreferences.getInstance();
+  //       prefs.setBool('isLoggedIn', false);
+  //       prefs.remove('isLoggedIn');
+  //
+  //       Navigator.pushAndRemoveUntil(
+  //           context,
+  //           MaterialPageRoute(builder: (context) => const LoginScreen()),
+  //               (Route<dynamic> r) => false);
+  //       //To Do: delete all ads of this user too?
+  //     } else {
+  //       print("No user is currently signed in.");
+  //     }
+  //   } catch (e) {
+  //     print("Error deleting user: $e");
+  //   }
+  // }
+
   // void _showContactUsDialogWeb(BuildContext context) {
   //   final Uri whatsApp = kIsWeb
   //       ? Uri.parse('https://wa.me/+923032777297')
@@ -117,75 +191,13 @@ class ProfileScreenState extends State<ProfileScreen> {
   //   );
   // }
 
-  void _logout(BuildContext context) async {
-    isLoggedIn = false;
-    try {
-      await _auth.signOut();
-      Fluttertoast.showToast(
-          msg: "Logged Out Successfully!",
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 2,
-          textColor: Colors.white,
-          fontSize: 10.0);
-
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      prefs.setBool('isLoggedIn', isLoggedIn);
-      prefs.remove('isLoggedIn');
-
-      Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-          (Route<dynamic> r) => false);
-    } catch (e) {
-      print('Error Signing Out: $e');
-      Fluttertoast.showToast(
-          msg: e.toString(),
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 2,
-          textColor: Colors.white,
-          fontSize: 10.0);
-    }
-  }
-
-  Future<void> _deleteUser(User? currentUser) async {
-    try {
-      if (currentUser != null) {
-        await currentUser.delete();
-        Fluttertoast.showToast(
-            msg: "Account deleted successfully!",
-            toastLength: Toast.LENGTH_LONG,
-            gravity: ToastGravity.BOTTOM,
-            timeInSecForIosWeb: 2,
-            textColor: Colors.white,
-            fontSize: 10.0);
-
-        print("User deleted successfully.");
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        prefs.setBool('isLoggedIn', false);
-        prefs.remove('isLoggedIn');
-
-        Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const LoginScreen()),
-            (Route<dynamic> r) => false);
-        //To Do: delete all ads of this user too?
-      } else {
-        print("No user is currently signed in.");
-      }
-    } catch (e) {
-      print("Error deleting user: $e");
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
       return SingleChildScrollView(
           child: StreamBuilder<DocumentSnapshot>(
-              stream: userDoc!.snapshots(),
+              stream: _userDoc!.snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -195,7 +207,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                 }
                 final userData = snapshot.data!.data() as Map<String, dynamic>?;
                 if (userData == null) {
-                  _deleteUser(_auth.currentUser);
+                  _moveToLoginScreen();
                   return Container(
                       width: MediaQuery.sizeOf(context).width,
                       height: MediaQuery.sizeOf(context).height,
@@ -213,7 +225,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                       ]));
                 }
                 final fullName = userData['full_name'] as String;
-                final email = userData['email'] as String;
+                //final email = userData['email'] as String;
                 final profileImageUrl = userData['profile_image_url'] as String;
 
                 return Center(
@@ -266,21 +278,21 @@ class ProfileScreenState extends State<ProfileScreen> {
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .headlineSmall)),
-                                    const SizedBox(height: 10),
-                                    Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 10),
-                                        decoration: BoxDecoration(
-                                            border: Border.all(
-                                                color: AppColors.primaryColor,
-                                                width: 2),
-                                            borderRadius:
-                                                BorderRadius.circular(10)),
-                                        child: Text(email,
-                                            textAlign: TextAlign.center,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .headlineSmall)),
+                                    //const SizedBox(height: 10),
+                                    // Container(
+                                    //     padding: const EdgeInsets.symmetric(
+                                    //         horizontal: 10),
+                                    //     decoration: BoxDecoration(
+                                    //         border: Border.all(
+                                    //             color: AppColors.primaryColor,
+                                    //             width: 2),
+                                    //         borderRadius:
+                                    //             BorderRadius.circular(10)),
+                                    //     child: Text(email,
+                                    //         textAlign: TextAlign.center,
+                                    //         style: Theme.of(context)
+                                    //             .textTheme
+                                    //             .headlineSmall)),
                                     const SizedBox(height: 10),
                                     SizedBox(
                                         width: 200,

@@ -181,13 +181,17 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
       );
     } else {
       Fluttertoast.showToast(
-          msg: "Please grant Location permission first!",
+          msg: !kIsWeb
+              ? "Please grant Location permission first!"
+              : "Please grant Location permission from browsers settings!",
           toastLength: Toast.LENGTH_LONG,
           gravity: ToastGravity.BOTTOM,
           timeInSecForIosWeb: 2,
           textColor: Colors.white,
           fontSize: 10.0);
-      openAppSettings();
+      if (!kIsWeb) {
+        openAppSettings();
+      }
     }
   }
 
@@ -206,29 +210,32 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
       );
     } else {
       Fluttertoast.showToast(
-          msg: "Please grant Location permission first!",
+          msg: !kIsWeb
+              ? "Please grant Location permission first!"
+              : "Please grant Location permission from browsers settings!",
           toastLength: Toast.LENGTH_LONG,
           gravity: ToastGravity.BOTTOM,
           timeInSecForIosWeb: 2,
           textColor: Colors.white,
           fontSize: 10.0);
-      openAppSettings();
+      if (!kIsWeb) {
+        openAppSettings();
+      }
     }
   }
 
   void _addMarker() {
     if (_latitude != null && _longitude != null) {
-      if (_marker.isNotEmpty) _marker.clear;
+      if (_marker.isNotEmpty) {
+        _marker.clear();
+      }
       setState(() {
         _marker.add(Marker(
-          markerId: const MarkerId('hostel_location'),
-          position: LatLng(double.parse(_latitude!), double.parse(_longitude!)),
-          infoWindow: InfoWindow(
-            title: _hostelNameController.text,
-          ),
-        ));
+            markerId: const MarkerId('hostel_location'),
+            position:
+                LatLng(double.parse(_latitude!), double.parse(_longitude!)),
+            infoWindow: InfoWindow(title: _hostelNameController.text)));
       });
-      // Create a new camera position
       _updateCameraPosition();
     }
   }
@@ -538,6 +545,19 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
     }
   }
 
+  void _openFileExplorer() async {
+    //Ask user files and storage permission
+    FilePickerResult? result = await FilePicker.platform
+        .pickFiles(type: FileType.image, allowMultiple: true);
+    if (result != null) {
+      setState(() {
+        for (var file in result.files) {
+          _imageBytes.add(file);
+        }
+      });
+    }
+  }
+
   void _showOptions() {
     showCupertinoModalPopup(
         context: context,
@@ -558,54 +578,90 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
   }
 
   void _showImageDialog(BuildContext context, List images) {
+    int currentPage = 0;
+    PageController pageController = PageController(initialPage: currentPage);
     showDialog(
         context: context,
         builder: (BuildContext context) {
-          return Dialog(
-              child: Stack(children: [
-            SizedBox(
-                width: MediaQuery.of(context).size.width * 0.8,
-                height: MediaQuery.of(context).size.height * 0.8,
-                child: Container(
-                    margin: const EdgeInsets.all(5.0),
-                    child: PageView.builder(
-                        itemCount: images.length,
-                        itemBuilder: (context, index) {
-                          return Center(
-                              child: Stack(children: [
-                            if (images is List<PlatformFile>)
-                              Image.memory(images[index].bytes!),
-                            if (images is List<XFile>)
-                              Image.file(File(images[index].path)),
-                            if (images is List<String>)
-                              CachedNetworkImage(
-                                  imageUrl: images[index],
-                                  placeholder: (context, url) => const Center(
-                                      child: CircularProgressIndicator()),
-                                  errorWidget: (context, url, error) =>
-                                      const Icon(Icons.error)),
-                            Container(
-                                padding: const EdgeInsets.all(8),
-                                color: Colors.black.withOpacity(0.7),
-                                child: Text('${index + 1}/${images.length}',
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold)))
-                          ]));
-                        }))),
-            Positioned(
-                top: 8,
-                right: 8,
-                child: InkWell(
-                    onTap: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: const CircleAvatar(
-                        backgroundColor: Colors.white,
-                        radius: 16,
-                        child:
-                            Icon(Icons.close, color: Colors.black, size: 20))))
-          ]));
+          return StatefulBuilder(builder: (context, setState) {
+            return Dialog(
+                child: Stack(children: [
+              Container(
+                  width: MediaQuery.of(context).size.width * 0.8,
+                  height: MediaQuery.of(context).size.height * 0.8,
+                  margin: const EdgeInsets.all(15.0),
+                  child: PageView.builder(
+                      itemCount: images.length,
+                      controller: pageController,
+                      onPageChanged: (index) {
+                        setState(() {
+                          currentPage = index;
+                        });
+                      },
+                      itemBuilder: (context, index) {
+                        return images is List<PlatformFile>
+                            ? Image.memory(images[index].bytes!)
+                            : images is List<XFile>
+                                ? Image.file(File(images[index].path))
+                                : images is List<String>
+                                    ? CachedNetworkImage(
+                                        imageUrl: images[index],
+                                        placeholder: (context, url) =>
+                                            const Center(
+                                                child:
+                                                    CircularProgressIndicator()),
+                                        errorWidget: (context, url, error) =>
+                                            const Icon(Icons.error))
+                                    : null;
+                      })),
+              Positioned(
+                  top: 10,
+                  left: 10,
+                  child: Container(
+                      padding: const EdgeInsets.all(8),
+                      color: Colors.black.withOpacity(0.7),
+                      child: Text('${currentPage + 1}/${images.length}',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)))),
+              Positioned(
+                  top: 10,
+                  right: 10,
+                  child: InkWell(
+                      onTap: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const CircleAvatar(
+                          backgroundColor: Colors.white,
+                          radius: 16,
+                          child: Icon(Icons.close,
+                              color: Colors.black, size: 20)))),
+              if (kIsWeb)
+                Positioned(
+                    left: 8,
+                    top: MediaQuery.of(context).size.height * 0.8 / 2,
+                    child: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios),
+                        onPressed: () {
+                          if (currentPage > 0) {
+                            currentPage--;
+                            pageController.jumpToPage(currentPage);
+                          }
+                        })),
+              if (kIsWeb)
+                Positioned(
+                    right: 8,
+                    top: MediaQuery.of(context).size.height * 0.8 / 2,
+                    child: IconButton(
+                        icon: const Icon(Icons.arrow_forward_ios),
+                        onPressed: () {
+                          if (currentPage < images.length - 1) {
+                            currentPage++;
+                            pageController.jumpToPage(currentPage);
+                          }
+                        }))
+            ]));
+          });
         });
   }
 
@@ -628,18 +684,6 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                     child: const Text('Remove'))
               ]);
         });
-  }
-
-  void _openFileExplorer() async {
-    FilePickerResult? result = await FilePicker.platform
-        .pickFiles(type: FileType.image, allowMultiple: true);
-    if (result != null) {
-      setState(() {
-        for (var file in result.files) {
-          _imageBytes.add(file);
-        }
-      });
-    }
   }
 
   @override
@@ -670,6 +714,10 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                                         CrossAxisAlignment.center,
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
+                                      const SizedBox(height: 10),
+                                      const Text("Fields with * are compulsory",
+                                          style: TextStyle(color: Colors.grey)),
+                                      const SizedBox(height: 10),
                                       // for old images that are already uploaded
                                       if (_imageUrls.isNotEmpty)
                                         SizedBox(
@@ -711,25 +759,24 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                                                         Positioned(
                                                             bottom: 8.0,
                                                             right: 8.0,
-                                                            child:
-                                                                InkWell(
-                                                                    onTap: () {
-                                                                      _showAlertDialog(
-                                                                          context,
-                                                                          index);
-                                                                    },
-                                                                    child: const CircleAvatar(
-                                                                        backgroundColor:
-                                                                            AppColors
-                                                                                .primaryColor,
-                                                                        radius:
-                                                                            20,
-                                                                        child: Icon(
-                                                                            Icons
-                                                                                .delete,
-                                                                            color:
-                                                                                Colors.white,
-                                                                            size: 25))))
+                                                            child: InkWell(
+                                                                onTap: () {
+                                                                  _showAlertDialog(
+                                                                      context,
+                                                                      index);
+                                                                },
+                                                                child: const CircleAvatar(
+                                                                    backgroundColor:
+                                                                        AppColors
+                                                                            .primaryColor,
+                                                                    radius: 20,
+                                                                    child: Icon(
+                                                                        Icons
+                                                                            .delete,
+                                                                        color: Colors
+                                                                            .white,
+                                                                        size:
+                                                                            25))))
                                                       ]));
                                                 })),
                                       //for web images that are going to be uploaded for edit/post ad
@@ -763,24 +810,23 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                                                         Positioned(
                                                             bottom: 8.0,
                                                             right: 8.0,
-                                                            child:
-                                                                InkWell(
-                                                                    onTap: () {
-                                                                      _deleteImageNew(
-                                                                          index);
-                                                                    },
-                                                                    child: const CircleAvatar(
-                                                                        backgroundColor:
-                                                                            AppColors
-                                                                                .primaryColor,
-                                                                        radius:
-                                                                            20,
-                                                                        child: Icon(
-                                                                            Icons
-                                                                                .delete,
-                                                                            color:
-                                                                                Colors.white,
-                                                                            size: 25))))
+                                                            child: InkWell(
+                                                                onTap: () {
+                                                                  _deleteImageNew(
+                                                                      index);
+                                                                },
+                                                                child: const CircleAvatar(
+                                                                    backgroundColor:
+                                                                        AppColors
+                                                                            .primaryColor,
+                                                                    radius: 20,
+                                                                    child: Icon(
+                                                                        Icons
+                                                                            .delete,
+                                                                        color: Colors
+                                                                            .white,
+                                                                        size:
+                                                                            25))))
                                                       ]));
                                                 })))),
                                       // for mobile images that are going to be uploaded for edit/post ad
@@ -810,24 +856,23 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                                                         Positioned(
                                                             bottom: 8.0,
                                                             right: 8.0,
-                                                            child:
-                                                                InkWell(
-                                                                    onTap: () {
-                                                                      _deleteImageNew(
-                                                                          index);
-                                                                    },
-                                                                    child: const CircleAvatar(
-                                                                        backgroundColor:
-                                                                            AppColors
-                                                                                .primaryColor,
-                                                                        radius:
-                                                                            20,
-                                                                        child: Icon(
-                                                                            Icons
-                                                                                .delete,
-                                                                            color:
-                                                                                Colors.white,
-                                                                            size: 25))))
+                                                            child: InkWell(
+                                                                onTap: () {
+                                                                  _deleteImageNew(
+                                                                      index);
+                                                                },
+                                                                child: const CircleAvatar(
+                                                                    backgroundColor:
+                                                                        AppColors
+                                                                            .primaryColor,
+                                                                    radius: 20,
+                                                                    child: Icon(
+                                                                        Icons
+                                                                            .delete,
+                                                                        color: Colors
+                                                                            .white,
+                                                                        size:
+                                                                            25))))
                                                       ]));
                                                 })),
                                       if (_images.isNotEmpty ||
@@ -989,12 +1034,12 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                                       const SizedBox(height: 10),
                                       DropdownButtonFormField<String>(
                                         decoration: const InputDecoration(
-                                            labelText: 'Hostel Gender *'),
+                                            labelText: 'Hostel Type *'),
                                         value: _selectedGender,
                                         onChanged: (value) => setState(
                                             () => _selectedGender = value),
                                         validator: (value) => value == null
-                                            ? 'Please select Hostel Gender'
+                                            ? 'Please select Hostel Type'
                                             : null,
                                         items: ['Boys Hostel', 'Girls Hostel']
                                             .map<DropdownMenuItem<String>>(
@@ -1203,10 +1248,18 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                                               CrossAxisAlignment.center,
                                           children: [
                                             const SizedBox(height: 10),
-                                            const Text(
-                                              "Tap on red marker to show options",
+                                            Text(
+                                              (!kIsWeb &&
+                                                      (_latitude != null ||
+                                                          _longitude != null))
+                                                  ? "Tap on red marker to show options"
+                                                  : (kIsWeb &&
+                                                          (_latitude != null ||
+                                                              _longitude != null))
+                                                      ? "Selected Location"
+                                                      : "",
                                               textAlign: TextAlign.center,
-                                              style: TextStyle(
+                                              style: const TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: 15),
                                             ),
@@ -1292,7 +1345,7 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                                                         .instance.primaryFocus
                                                         ?.unfocus();
                                                     showFlexibleBottomSheet(
-                                                      isDismissible: false,
+                                                      isDismissible: true,
                                                       minHeight: 0.3,
                                                       maxHeight: 0.5,
                                                       context: context,
@@ -1396,43 +1449,42 @@ class _PostEditAdScreenState extends State<PostEditAdScreen> {
                                       const SizedBox(height: 15),
                                       if (_isEdit)
                                         ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                              backgroundColor:
-                                                  AppColors.primaryColor),
-                                          onPressed: () => showDialog<bool>(
-                                            context: context,
-                                            builder: (context) => AlertDialog(
-                                              title:
-                                                  const Text('Are you sure?'),
-                                              content: const Text(
-                                                  'This action will permanently delete this Ad'),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.pop(
-                                                          context, false),
-                                                  child: const Text('Cancel'),
+                                            style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    AppColors.primaryColor),
+                                            onPressed: () => showDialog<bool>(
+                                                  context: context,
+                                                  builder: (context) =>
+                                                      AlertDialog(
+                                                    title: const Text(
+                                                        'Are you sure?'),
+                                                    content: const Text(
+                                                        'This action will permanently delete this Ad'),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.pop(
+                                                                context, false),
+                                                        child: const Text(
+                                                            'Cancel'),
+                                                      ),
+                                                      TextButton(
+                                                        onPressed: () {
+                                                          Navigator.pop(
+                                                              context);
+                                                          _deleteAd();
+                                                        },
+                                                        child: const Text(
+                                                            'Delete'),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
-                                                TextButton(
-                                                  onPressed: () {
-                                                    Navigator.pop(context);
-                                                    _deleteAd();
-                                                  },
-                                                  child: const Text('Delete'),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          child: const Text(
-                                            'Delete Ad',
-                                            style: TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold),
-                                          ),
-                                        ),
-                                      const SizedBox(height: 10),
-                                      const Text("Fields with * are compulsory",
-                                          style: TextStyle(color: Colors.grey))
+                                            child: const Text('Delete Ad',
+                                                style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight:
+                                                        FontWeight.bold)))
                                     ])))));
               })),
           if (_isLoading)

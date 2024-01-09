@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hostel_add/resources/values/colors.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class OtherLocationScreen extends StatefulWidget {
   final Function(LatLng) onSaveLocation; // Callback Function
@@ -27,16 +30,12 @@ class _OtherLocationScreenState extends State<OtherLocationScreen> {
     super.initState();
     if (widget.lat != null && widget.long != null) {
       setState(() {
-        //location = widget.initialLocation;
         if (markers.isNotEmpty) markers.clear();
-        markers.add(
-          Marker(
+        markers.add(Marker(
             infoWindow: const InfoWindow(title: 'Existing Location'),
             markerId: const MarkerId('existing-location'),
             position:
-                LatLng(double.parse(widget.lat!), double.parse(widget.long!)),
-          ),
-        );
+                LatLng(double.parse(widget.lat!), double.parse(widget.long!))));
         _moveToLocation(double.parse(widget.lat!), double.parse(widget.long!));
       });
     }
@@ -44,17 +43,10 @@ class _OtherLocationScreenState extends State<OtherLocationScreen> {
 
   void _moveToLocation(double lat, double long) async {
     if (mapController != null) {
-      await mapController?.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(
-            target: LatLng(lat, long),
-            zoom: 15.0,
-          ),
-        ),
-      );
+      await mapController?.animateCamera(CameraUpdate.newCameraPosition(
+          CameraPosition(target: LatLng(lat, long), zoom: 15.0)));
     } else {
       // If mapController is null, wait for a short duration and try again
-      // This is to handle the situation when onMapCreated is not called yet
       Future.delayed(const Duration(milliseconds: 500), () {
         _moveToLocation(lat, long); // Retry after a delay
       });
@@ -66,105 +58,113 @@ class _OtherLocationScreenState extends State<OtherLocationScreen> {
     setState(() {
       location = point;
       markers.clear();
-      markers.add(
-        Marker(
+      markers.add(Marker(
           infoWindow: const InfoWindow(title: 'New Location'),
           markerId: const MarkerId('selected-location'),
-          position: point,
-        ),
-      );
+          position: point));
     });
+  }
+
+  Future<void> _getCurrentLocation() async {
+    await [Permission.location].request();
+    bool isLocationPermissionGranted = await Permission.location.isGranted;
+    if (isLocationPermissionGranted) {
+      final currentLocation = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+      markers.clear();
+      check = true;
+      setState(() {
+        location = LatLng(currentLocation.latitude, currentLocation.longitude);
+        markers.add(Marker(
+            infoWindow: const InfoWindow(title: 'New Location'),
+            markerId: const MarkerId('selected-location'),
+            position:
+                LatLng(currentLocation.latitude, currentLocation.longitude)));
+      });
+      _moveToLocation(currentLocation.latitude, currentLocation.longitude);
+    } else {
+      Fluttertoast.showToast(
+          msg: !kIsWeb ? "Please grant Location permission first!" : "Please grant Location permission from browsers settings!",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 2,
+          textColor: Colors.white,
+          fontSize: 10.0);
+      if(!kIsWeb) {
+        openAppSettings();
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 30,
-        automaticallyImplyLeading: false,
-        centerTitle: true,
-        backgroundColor: AppColors.primaryColor,
-        title: const Text('Long press on map to save location',
-            style: TextStyle(color: Colors.white, fontSize: 18)),
-      ),
-      body: Stack(
-        children: [
-          GoogleMap(
-            myLocationEnabled: true,
-            myLocationButtonEnabled: true,
-            zoomControlsEnabled: true,
-            initialCameraPosition: const CameraPosition(
-                target: LatLng(31.582045, 74.329376), zoom: 15),
-            mapType: MapType.terrain,
-            markers: markers,
-            onLongPress: _onMapLongPress,
-            onMapCreated: (GoogleMapController controller) {
-              _controller.complete(controller);
-              mapController = controller;
-            },
-          ),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Align(
-                    alignment: Alignment.center,
-                    child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryColor,
-                        ),
-                        child: const Text(
-                          "Save this Location",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        onPressed: () {
-                          if (check) {
-                            widget.onSaveLocation(location!);
-                            Navigator.pop(context);
-                          } else {
-                            Fluttertoast.showToast(
-                              msg: "Please select location first!",
-                              toastLength: Toast.LENGTH_SHORT,
-                              gravity: ToastGravity.BOTTOM,
-                              timeInSecForIosWeb: 1,
-                            );
-                          }
-                        }),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Positioned(
-          //     bottom: 15.0,
-          //     left: 100.0,
-          //     child: Center(
-          //       child: ElevatedButton(
-          //           style: ElevatedButton.styleFrom(
-          //               backgroundColor: AppColors.primaryColor),
-          //           child: const Text("Save this Location",
-          //               style: TextStyle(color: Colors.white)),
-          //           onPressed: () {
-          //             if (check) {
-          //               widget.onSaveLocation(location!);
-          //               Navigator.pop(context);
-          //             } else {
-          //               Fluttertoast.showToast(
-          //                 msg: "Please select location first!",
-          //                 toastLength: Toast.LENGTH_SHORT,
-          //                 gravity: ToastGravity.BOTTOM,
-          //                 timeInSecForIosWeb: 1,
-          //               );
-          //             }
-          //           }),
-          //     ))
-        ],
-      ),
-    );
+        appBar: AppBar(
+          toolbarHeight: 30,
+          automaticallyImplyLeading: false,
+          centerTitle: true,
+          backgroundColor: AppColors.primaryColor,
+          title: const Text(
+              kIsWeb
+                  ? 'Tap on your custom location'
+                  : 'Long press on map to save location',
+              style: TextStyle(color: Colors.white, fontSize: 18)),
+        ),
+        body: Column(children: [
+          Expanded(
+              child: GoogleMap(
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: true,
+                  zoomControlsEnabled: true,
+                  initialCameraPosition: const CameraPosition(
+                      target: LatLng(31.582045, 74.329376), zoom: 15),
+                  mapType: MapType.terrain,
+                  markers: markers,
+                  onTap: kIsWeb ? _onMapLongPress : null,
+                  onLongPress: _onMapLongPress,
+                  onMapCreated: (GoogleMapController controller) {
+                    _controller.complete(controller);
+                    mapController = controller;
+                  })),
+          const SizedBox(height: 10),
+          Row(children: [
+            Flexible(
+                fit: FlexFit.tight,
+                child: FractionallySizedBox(
+                    widthFactor: 1,
+                    child: Center(
+                        child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryColor),
+                            onPressed: _getCurrentLocation,
+                            child: const Text('Go to my Location',
+                                style: TextStyle(color: Colors.white),
+                                textAlign: TextAlign.center))))),
+            const SizedBox(width: 10),
+            Flexible(
+                fit: FlexFit.tight,
+                child: FractionallySizedBox(
+                    widthFactor: 1,
+                    child: Center(
+                        child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryColor),
+                            child: const Text("Save this Location",
+                                style: TextStyle(color: Colors.white)),
+                            onPressed: () {
+                              if (check) {
+                                widget.onSaveLocation(location!);
+                                Navigator.pop(context);
+                              } else {
+                                Fluttertoast.showToast(
+                                    msg: "Please select location first!",
+                                    toastLength: Toast.LENGTH_SHORT,
+                                    gravity: ToastGravity.BOTTOM,
+                                    timeInSecForIosWeb: 1);
+                              }
+                            }))))
+          ]),
+          const SizedBox(height: 10)
+        ]));
   }
 }
